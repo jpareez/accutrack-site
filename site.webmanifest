@@ -1,0 +1,13 @@
+{
+  "name": "Accu-Track Financial Solutions",
+  "short_name": "Accu-Track",
+  "description": "Outsourced contract management, royalty reporting, and licensing compliance for companies that manage complex portfolios.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#308088",
+  "icons": [
+    { "src": "/assets/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/assets/android-chrome-512x512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

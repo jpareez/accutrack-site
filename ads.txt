@@ -1,0 +1,4 @@
+# Accu-Track Financial Solutions is not an advertising publisher.
+# This file exists to satisfy the IAB Authorized Digital Sellers (ads.txt) spec
+# for sites that do not sell advertising inventory.
+# https://iabtechlab.com/ads-txt/
