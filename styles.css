@@ -537,6 +537,21 @@ a.service-card:hover .service-card__more .arrow { transform: translateX(3px); }
 @media (prefers-reduced-motion: reduce) { .faq__a { transition: none; } }
 .faq__a p { color: var(--ink-soft); padding: 0 4px 26px; max-width: 70ch; }
 
+/* FAQ question heading wrapper — keeps the accordion look, gives crawlers a real <h3> */
+.faq__q-h { margin: 0; font: inherit; }
+
+/* Team-vs-software comparison table */
+.cmp-wrap { max-width: 760px; margin: 8px auto 0; }
+.cmp { width: 100%; border-collapse: collapse; font-size: 0.98rem; }
+.cmp th, .cmp td { padding: 15px 18px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
+.cmp thead th { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; color: var(--ink-muted); border-bottom: 2px solid var(--line-strong); }
+.cmp thead th.cmp__us { color: var(--teal); }
+.cmp tbody th { font-weight: 600; color: var(--ink); width: 34%; }
+.cmp td.cmp__us { color: var(--ink); font-weight: 600; }
+.cmp td.cmp__them { color: var(--ink-muted); }
+.cmp .cmp__us { background: var(--teal-wash); }
+.cmp tbody tr:last-child th, .cmp tbody tr:last-child td { border-bottom: 0; }
+
 /* ============================ PROCESS STEPS =========================== */
 .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; counter-reset: step; }
 .step {
