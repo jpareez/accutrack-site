@@ -34,13 +34,22 @@
     if (e.key === "Escape") setMenu(false);
   });
 
-  /* ---------- FAQ accordion ---------- */
+  /* ---------- FAQ accordion ----------
+     Toggles are h3[role=button] so the question text stays direct heading
+     content for crawlers; keyboard support replicates native button. */
   document.querySelectorAll(".faq__q").forEach(function (btn) {
-    btn.addEventListener("click", function () {
+    function toggleItem() {
       var item = btn.closest(".faq__item");
       var open = item.getAttribute("data-open") === "true";
       item.setAttribute("data-open", open ? "false" : "true");
       btn.setAttribute("aria-expanded", open ? "false" : "true");
+    }
+    btn.addEventListener("click", toggleItem);
+    btn.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
+        e.preventDefault();
+        toggleItem();
+      }
     });
   });
 
