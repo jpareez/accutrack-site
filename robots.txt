@@ -29,4 +29,4 @@ Allow: /
 User-agent: Bingbot
 Allow: /
 
-Sitemap: https://go.accutracksolutions.com/sitemap.xml
+Sitemap: https://www.accutracksolutions.com/sitemap.xml
