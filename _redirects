@@ -1,0 +1,9 @@
+# Legacy old-site URLs still indexed by Google (Jul 2026 audit) -> modern equivalents
+/about-us/* /about 301
+/contact-us/* /contact 301
+/start-here/* /contact 301
+/testimonials/* /about 301
+/compliance-management-case-study/* /case-study 301
+/service-offerings/licensing-management/* /licensing-compliance 301
+/service-offerings/contract-management/* /outsourced-contract-management 301
+/service-offerings/* /services 301
