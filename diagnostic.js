@@ -1073,19 +1073,20 @@
         deduction: ["The team goes and gets it back.", "Deductions get contested with documentation first, and recovery follows. Nothing to install, nobody new to hire, operational in 2 to 4 weeks."],
       }[state.service] || ["The team takes it over.", "Every statement gets reconciled against the agreement terms, and someone acts on what turns up. Nothing to install, nobody new to hire, operational in 2 to 4 weeks."];
       var steps = [
-        ["The full read.", "Thirty minutes with a specialist, your agreements open. Plain words, no pitch. You leave knowing where it leaks and what closing it takes."],
+        ["The full read.", "Thirty minutes on the phone with a specialist. Plain words, no pitch. You leave knowing where it leaks and what closing it takes."],
         ["A plan you approve first.", "Scope and price on paper before any work starts. You keep every decision."],
         step3,
       ];
+      var mech = el("div", "vx-mech");
       for (var st = 0; st < steps.length; st++) {
-        var step = el("div", "vx-step");
-        step.appendChild(el("span", "vx-step__n", "Step " + (st + 1)));
-        var sb = el("div", "vx-step__body");
-        sb.appendChild(el("p", "vx-step__head", steps[st][0]));
-        sb.appendChild(el("p", "vx-step__sub", steps[st][1]));
-        step.appendChild(sb);
-        inner.appendChild(step);
+        if (st > 0) mech.appendChild(el("span", "vx-mech__arrow"));
+        var node = el("div", "vx-mech__node");
+        node.appendChild(el("span", "vx-mech__disc", "" + (st + 1)));
+        node.appendChild(el("p", "vx-mech__head", steps[st][0]));
+        node.appendChild(el("p", "vx-mech__sub", steps[st][1]));
+        mech.appendChild(node);
       }
+      inner.appendChild(mech);
       inner.appendChild(el("p", "vx-mech__anchor", "It typically costs less than one full-time contract administrator."));
 
       /* Proof strip */
@@ -1247,6 +1248,15 @@
 
       function renderTimes() {
         timePane.innerHTML = "";
+        timePane.classList.remove("is-in");
+        window.requestAnimationFrame(function () {
+          window.requestAnimationFrame(function () { timePane.classList.add("is-in"); });
+        });
+        if (window.innerWidth < 680) {
+          window.setTimeout(function () {
+            timePane.scrollIntoView({ block: "nearest", behavior: reduce ? "auto" : "smooth" });
+          }, 60);
+        }
         timePane.appendChild(el("p", "vx-cal__label", "Times · " + fmtDay(cal.date)));
         var grid = el("div", "vx-times");
         (avail[cal.date] || []).forEach(function (iso) {
@@ -1281,7 +1291,7 @@
               mount.innerHTML = "";
               var done = el("div", "vx-booked");
               done.appendChild(el("p", "vx-booked__head", "Booked. " + fmtDay(cal.date) + " at " + fmtTime(iso) + "."));
-              done.appendChild(el("p", "vx-booked__sub", "A confirmation is on its way to " + state.email + ". Keep your agreements handy for the call, " + state.first + "."));
+              done.appendChild(el("p", "vx-booked__sub", "A confirmation is on its way to " + state.email + ". Talk soon, " + state.first + "."));
               mount.appendChild(done);
               if (state.stickyBar) state.stickyBar.remove();
               track("diagnostic_booked", state.service);
@@ -1335,7 +1345,7 @@
       box.appendChild(item);
     }
 
-    box.appendChild(el("p", "vx-reveal__more", "The full read goes deeper than these. Your specialist walks through the rest on the call, with your agreements in front of them."));
+    box.appendChild(el("p", "vx-reveal__more", "The full read goes deeper than these. Your specialist walks through the rest on the call."));
     mount.appendChild(box);
     mount.hidden = false;
   }

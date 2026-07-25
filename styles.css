@@ -1023,8 +1023,8 @@ html.js .hero .reveal{opacity:1;transform:none;}
 .chat-head__phone { font-size: .9rem; font-weight: 600; color: var(--teal-dark); text-decoration: none; }
 .chat-head__phone:hover { text-decoration: underline; }
 
-.chat-main { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: flex-end; }
-.chat-log { flex: 0 0 auto; padding: 18px 0 8px; }
+.chat-main { flex: 1 1 auto; display: flex; flex-direction: column; }
+.chat-log { flex: 1 1 auto; padding: 18px 0 8px; }
 .chat-msg {
   max-width: min(86%, 560px); padding: 11px 14px; margin-top: 8px; border-radius: 14px;
   font-size: .97rem; line-height: 1.5; overflow-wrap: break-word;
@@ -1222,9 +1222,24 @@ button.vx-calcell.is-sel::after { background: var(--gold); }
 .vx-times { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
 .vx-analyzing__brand { font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: #7FA0A0; margin: 0; }
 .vx-mech__wedge { margin: 16px 0 4px; font-size: clamp(1.15rem, 2.8vw, 1.45rem); font-weight: 800; letter-spacing: -0.01em; max-width: 30ch; }
-.vx-step { display: grid; grid-template-columns: clamp(64px, 10vw, 92px) 1fr; gap: 6px clamp(14px, 3vw, 26px); padding: 16px 0; border-bottom: 1px solid var(--line); }
-.vx-step:last-of-type { border-bottom: 0; }
-.vx-step__n { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--teal-dark); padding-top: 5px; }
-.vx-step__head { margin: 0; font-weight: 700; font-size: 1.05rem; }
-.vx-step__sub { margin: 4px 0 0; color: var(--ink-soft); line-height: 1.55; max-width: 60ch; }
 .vx-mech__anchor { margin: 14px 0 0; font-family: var(--mono); font-size: .82rem; letter-spacing: .02em; color: var(--accent-deep); }
+
+/* Mechanism diagram */
+.vx-mech { display: grid; grid-template-columns: 1fr 40px 1fr 40px 1fr; gap: 10px; align-items: start; margin-top: 18px; }
+.vx-mech__node { background: var(--teal-wash); border: 1px solid var(--line-strong); border-radius: var(--radius-lg); padding: clamp(16px, 2.5vw, 22px); min-height: 100%; }
+.vx-mech__disc { display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; background: var(--teal); color: #fff; font-family: var(--mono); font-size: 1rem; font-weight: 500; margin-bottom: 12px; }
+.vx-mech__head { margin: 0; font-weight: 800; font-size: 1.05rem; letter-spacing: -0.01em; }
+.vx-mech__sub { margin: 6px 0 0; color: var(--ink-soft); line-height: 1.5; font-size: .93rem; }
+.vx-mech__arrow { align-self: center; text-align: center; font-family: var(--mono); font-size: 22px; color: var(--accent-deep); }
+.vx-mech__arrow::before { content: "\2192"; }
+@media (max-width: 719px) {
+  .vx-mech { grid-template-columns: 1fr; gap: 6px; }
+  .vx-mech__arrow { padding: 2px 0; }
+  .vx-mech__arrow::before { content: "\2193"; }
+}
+/* Times panel entrance */
+.vx-timepane { opacity: 0; transform: translateY(8px); transition: opacity .22s cubic-bezier(.25,1,.5,1), transform .22s cubic-bezier(.25,1,.5,1); }
+.vx-timepane.is-in { opacity: 1; transform: translateY(0); }
+@media (prefers-reduced-motion: reduce) { .vx-timepane { transition: none; opacity: 1; transform: none; } }
+button.vx-calcell { transition: border-color .15s ease, background-color .15s ease, transform .12s cubic-bezier(.25,1,.5,1); }
+button.vx-calcell:active { transform: scale(.94); }
