@@ -942,6 +942,7 @@
       var bar = el("div", "vx-analyzing__bar");
       var fill = el("i");
       bar.appendChild(fill);
+      stage.appendChild(el("p", "vx-analyzing__brand", "Accu-Track · Free Assessment"));
       stage.appendChild(log2);
       stage.appendChild(bar);
       overlay.appendChild(stage);
@@ -1063,7 +1064,29 @@
         lockWrap.appendChild(row);
       }
       inner.appendChild(lockWrap);
-      inner.appendChild(el("p", "vx-deliver", "Your agreements open next to a specialist. Thirty minutes, plain words, no pitch. You leave knowing where it leaks and what closing it takes."));
+
+      /* Mechanism of solution: why booking closes the leak */
+      inner.appendChild(el("p", "vx-sechead", "How this gets fixed"));
+      inner.appendChild(el("p", "vx-mech__wedge", "Software gives you a platform. We give you a team."));
+      var step3 = {
+        contract: ["The team takes it over.", "Renewals, obligations, and the daily contract admin run for you. Nothing to install, nobody new to hire, operational in 2 to 4 weeks."],
+        deduction: ["The team goes and gets it back.", "Deductions get contested with documentation first, and recovery follows. Nothing to install, nobody new to hire, operational in 2 to 4 weeks."],
+      }[state.service] || ["The team takes it over.", "Every statement gets reconciled against the agreement terms, and someone acts on what turns up. Nothing to install, nobody new to hire, operational in 2 to 4 weeks."];
+      var steps = [
+        ["The full read.", "Thirty minutes with a specialist, your agreements open. Plain words, no pitch. You leave knowing where it leaks and what closing it takes."],
+        ["A plan you approve first.", "Scope and price on paper before any work starts. You keep every decision."],
+        step3,
+      ];
+      for (var st = 0; st < steps.length; st++) {
+        var step = el("div", "vx-step");
+        step.appendChild(el("span", "vx-step__n", "Step " + (st + 1)));
+        var sb = el("div", "vx-step__body");
+        sb.appendChild(el("p", "vx-step__head", steps[st][0]));
+        sb.appendChild(el("p", "vx-step__sub", steps[st][1]));
+        step.appendChild(sb);
+        inner.appendChild(step);
+      }
+      inner.appendChild(el("p", "vx-mech__anchor", "It typically costs less than one full-time contract administrator."));
 
       /* Proof strip */
       var proof = el("div", "vx-proofstrip");
@@ -1139,10 +1162,24 @@
 
     function renderPicker(mount, days) {
       mount.innerHTML = "";
-      var sel = { day: null, slot: "" };
-      var dayRow = el("div", "vx-cal__days");
-      var timeWrap = el("div", "vx-cal__timewrap");
+      var avail = {};
+      days.forEach(function (d) { avail[d.date] = d.slots; });
+      var months = [];
+      days.forEach(function (d) {
+        var m = d.date.slice(0, 7);
+        if (months.indexOf(m) === -1) months.push(m);
+      });
+      var cal = { month: 0, date: days[0].date, slot: "" };
+
+      mount.appendChild(el("p", "vx-cal__label", "Pick a day, then a time"));
+      var wrap = el("div", "vx-calwrap");
+      var calPane = el("div", "vx-calpane");
+      var timePane = el("div", "vx-timepane");
+      wrap.appendChild(calPane);
+      wrap.appendChild(timePane);
       var confirmWrap = el("div", "vx-cal__confirm");
+      mount.appendChild(wrap);
+      mount.appendChild(confirmWrap);
 
       function fmtDay(dateStr) {
         var d = new Date(dateStr + "T12:00:00");
@@ -1151,34 +1188,84 @@
       function fmtTime(iso) {
         return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
       }
+      function pad2(n) { return n < 10 ? "0" + n : "" + n; }
 
-      function slotBtn(label, onTap) {
-        var b = el("button", "vx-slot", label);
-        b.type = "button";
-        b.addEventListener("click", onTap);
-        return b;
-      }
+      function renderCal() {
+        calPane.innerHTML = "";
+        var mkey = months[cal.month];
+        var y = +mkey.slice(0, 4);
+        var mo = +mkey.slice(5, 7);
+        var head = el("div", "vx-calhead");
+        var label = el("span", "vx-calhead__label",
+          new Date(y, mo - 1, 1).toLocaleDateString([], { month: "long", year: "numeric" }));
+        var nav = el("span", "vx-calhead__nav");
+        var prev = el("button", "vx-calnav", "‹");
+        prev.type = "button";
+        prev.disabled = cal.month === 0;
+        prev.setAttribute("aria-label", "Previous month");
+        prev.addEventListener("click", function () { cal.month -= 1; renderCal(); });
+        var next = el("button", "vx-calnav", "›");
+        next.type = "button";
+        next.disabled = cal.month >= months.length - 1;
+        next.setAttribute("aria-label", "Next month");
+        next.addEventListener("click", function () { cal.month += 1; renderCal(); });
+        nav.appendChild(prev);
+        nav.appendChild(next);
+        head.appendChild(label);
+        head.appendChild(nav);
+        calPane.appendChild(head);
 
-      function renderTimes(day) {
-        timeWrap.innerHTML = "";
-        confirmWrap.innerHTML = "";
-        var row = el("div", "vx-cal__times");
-        day.slots.forEach(function (iso) {
-          var b = slotBtn(fmtTime(iso), function () {
-            sel.slot = iso;
-            Array.prototype.forEach.call(row.children, function (c) { c.classList.remove("vx-slot--on"); });
-            b.classList.add("vx-slot--on");
-            renderConfirm(day, iso);
-          });
-          row.appendChild(b);
+        var grid = el("div", "vx-calgrid");
+        ["S", "M", "T", "W", "T", "F", "S"].forEach(function (d) {
+          grid.appendChild(el("span", "vx-caldow", d));
         });
-        timeWrap.appendChild(el("p", "vx-cal__label", "Pick a time"));
-        timeWrap.appendChild(row);
+        var startDow = new Date(y, mo - 1, 1).getDay();
+        var dim = new Date(y, mo, 0).getDate();
+        var i;
+        for (i = 0; i < startDow; i++) grid.appendChild(el("span", "vx-calcell vx-calcell--void"));
+        for (i = 1; i <= dim; i++) {
+          var ds = mkey + "-" + pad2(i);
+          if (avail[ds]) {
+            var b = el("button", "vx-calcell" + (ds === cal.date ? " is-sel" : ""), "" + i);
+            b.type = "button";
+            (function (dsel) {
+              b.addEventListener("click", function () {
+                cal.date = dsel;
+                cal.slot = "";
+                confirmWrap.innerHTML = "";
+                renderCal();
+                renderTimes();
+              });
+            })(ds);
+            grid.appendChild(b);
+          } else {
+            grid.appendChild(el("span", "vx-calcell vx-calcell--off", "" + i));
+          }
+        }
+        calPane.appendChild(grid);
       }
 
-      function renderConfirm(day, iso) {
+      function renderTimes() {
+        timePane.innerHTML = "";
+        timePane.appendChild(el("p", "vx-cal__label", "Times · " + fmtDay(cal.date)));
+        var grid = el("div", "vx-times");
+        (avail[cal.date] || []).forEach(function (iso) {
+          var b = el("button", "vx-slot" + (iso === cal.slot ? " vx-slot--on" : ""), fmtTime(iso));
+          b.type = "button";
+          b.addEventListener("click", function () {
+            cal.slot = iso;
+            Array.prototype.forEach.call(grid.children, function (c) { c.classList.remove("vx-slot--on"); });
+            b.classList.add("vx-slot--on");
+            renderConfirm(iso);
+          });
+          grid.appendChild(b);
+        });
+        timePane.appendChild(grid);
+      }
+
+      function renderConfirm(iso) {
         confirmWrap.innerHTML = "";
-        var btn = el("button", "btn btn--primary btn--block", "Lock in " + fmtDay(day.date) + " at " + fmtTime(iso));
+        var btn = el("button", "btn btn--primary btn--block", "Lock in " + fmtDay(cal.date) + " at " + fmtTime(iso));
         btn.type = "button";
         btn.addEventListener("click", function () {
           btn.disabled = true;
@@ -1193,7 +1280,7 @@
               if (!r || !r.ok) throw new Error("book");
               mount.innerHTML = "";
               var done = el("div", "vx-booked");
-              done.appendChild(el("p", "vx-booked__head", "Booked. " + fmtDay(day.date) + " at " + fmtTime(iso) + "."));
+              done.appendChild(el("p", "vx-booked__head", "Booked. " + fmtDay(cal.date) + " at " + fmtTime(iso) + "."));
               done.appendChild(el("p", "vx-booked__sub", "A confirmation is on its way to " + state.email + ". Keep your agreements handy for the call, " + state.first + "."));
               mount.appendChild(done);
               if (state.stickyBar) state.stickyBar.remove();
@@ -1206,21 +1293,8 @@
         confirmWrap.appendChild(btn);
       }
 
-      days.forEach(function (day, idx) {
-        var b = slotBtn(fmtDay(day.date), function () {
-          sel.day = day;
-          Array.prototype.forEach.call(dayRow.children, function (c) { c.classList.remove("vx-slot--on"); });
-          b.classList.add("vx-slot--on");
-          renderTimes(day);
-        });
-        dayRow.appendChild(b);
-        if (idx === 0) { sel.day = day; b.classList.add("vx-slot--on"); renderTimes(day); }
-      });
-
-      mount.appendChild(el("p", "vx-cal__label", "Pick a day"));
-      mount.appendChild(dayRow);
-      mount.appendChild(timeWrap);
-      mount.appendChild(confirmWrap);
+      renderCal();
+      renderTimes();
     }
 
     open();
