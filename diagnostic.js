@@ -1,9 +1,12 @@
-/* Accu-Track diagnostic step funnel.
-   Renders into #vx-diagnostic on lead pages (replaces the embedded form) and
-   into #vx-reveal on the thank-you page (the two findings). Pre-rendered HTML
-   carries a noscript fallback to contact.html; nothing else depends on JS. */
+/* Accu-Track free-assessment conversation.
+   Runs full-screen on assessment.html (#vx-chat) and renders the findings
+   recap on thank-you.html (#vx-reveal). Answers are tap-chips and short
+   text turns; the diagnosis is rule-mapped from vetted copy. Pre-rendered
+   noscript fallback points to contact.html; nothing else depends on JS. */
 (function () {
   "use strict";
+
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   /* ------------------------------ Data ---------------------------------- */
 
@@ -136,8 +139,6 @@
     },
   };
 
-  /* Ordered candidates per lane: [findingKey, matchFn]. First two distinct
-     matches (by group) are shown; the rest of the matches ride to the CRM. */
   function candidates(lane) {
     var never = function (a) { return a.recency === "never" || a.recency === "unsure"; };
     var has = function (k) { return function (a) { return a.symptoms.indexOf(k) !== -1; }; };
@@ -217,13 +218,6 @@
 
   /* --------------------------- Small helpers ----------------------------- */
 
-  function el(tag, cls, text) {
-    var n = document.createElement(tag);
-    if (cls) n.className = cls;
-    if (text) n.textContent = text;
-    return n;
-  }
-
   function track(name, lane) {
     try {
       window.dataLayer = window.dataLayer || [];
@@ -260,256 +254,423 @@
     return m ? decodeURIComponent(m[1]) : "";
   }
 
-  /* ------------------------------ The card ------------------------------- */
+  function param(name) {
+    var m = window.location.search.match(new RegExp("[?&]" + name + "=([^&]+)"));
+    return m ? decodeURIComponent(m[1]) : "";
+  }
 
-  function buildCard(mount) {
-    var pageLane = mount.getAttribute("data-service") || "";
+  /* ------------------------------ The chat ------------------------------- */
+
+  function buildChat() {
+    var log = document.getElementById("vx-log");
+    var controls = document.getElementById("vx-controls");
+    if (!log || !controls) return;
+
     var state = {
-      service: "",
-      scale: "",
-      symptoms: [],
-      recency: "",
-      timeline: "",
-      step: 0,
-      started: false,
+      service: "", scale: "", symptoms: [], recency: "", timeline: "",
+      name: "", first: "", email: "", phone: "", company: "",
+      picks: null, started: false,
     };
-    var TOTAL = 6;
 
-    var card = el("div", "vx-diag");
-    var meta = el("div", "vx-diag__meta");
-    var metaLeft = el("span", "", "Free Assessment");
-    var metaRight = el("span", "");
-    meta.appendChild(metaLeft);
-    meta.appendChild(metaRight);
-    var bar = el("div", "vx-diag__bar");
-    var barFill = el("i");
-    bar.appendChild(barFill);
-    var body = el("div", "vx-diag__body");
-    card.appendChild(meta);
-    card.appendChild(bar);
-    card.appendChild(body);
-    mount.appendChild(card);
-
-    function setProgress() {
-      metaRight.textContent = "Question " + (state.step + 1) + " of " + TOTAL;
-      barFill.style.width = (((state.step + 1) / TOTAL) * 100) + "%";
+    function scrollDown() {
+      window.requestAnimationFrame(function () {
+        log.scrollTop = log.scrollHeight;
+        window.scrollTo(0, document.body.scrollHeight);
+      });
     }
 
-    function heading(text, sub) {
-      var h = el("h3", "vx-diag__q", text);
-      h.setAttribute("tabindex", "-1");
-      body.appendChild(h);
-      if (sub) body.appendChild(el("p", "vx-diag__sub", sub));
-      return h;
-    }
-
-    function nav(showBack) {
-      var row = el("div", "vx-diag__nav");
-      if (showBack) {
-        var back = el("button", "vx-back", "Back");
-        back.type = "button";
-        back.addEventListener("click", function () {
-          state.step -= 1;
-          render();
-        });
-        row.appendChild(back);
-      } else {
-        row.appendChild(el("span"));
-      }
-      body.appendChild(row);
-      return row;
-    }
-
-    function option(label, selected, onPick, tag) {
-      var b = el("button", "vx-opt");
-      b.type = "button";
-      b.appendChild(document.createTextNode(label));
-      if (tag) b.appendChild(el("span", "vx-opt__tag", tag));
-      if (selected) b.setAttribute("aria-pressed", "true");
-      b.addEventListener("click", onPick);
+    function bubble(cls, text) {
+      var b = document.createElement("div");
+      b.className = "chat-msg " + cls;
+      b.textContent = text;
+      log.appendChild(b);
+      scrollDown();
       return b;
     }
 
-    function advance() {
-      state.step += 1;
-      render();
+    function addUser(text) { bubble("chat-msg--user", text); }
+
+    /* Typing indicator, then the bot line, then cb. */
+    function addBot(text, cb, extraDelay) {
+      var t = document.createElement("div");
+      t.className = "chat-msg chat-msg--bot chat-typing";
+      t.setAttribute("aria-hidden", "true");
+      t.innerHTML = "<i></i><i></i><i></i>";
+      log.appendChild(t);
+      scrollDown();
+      var delay = reduce ? 60 : Math.min(350 + text.length * 9, 1050) + (extraDelay || 0);
+      window.setTimeout(function () {
+        t.className = "chat-msg chat-msg--bot";
+        t.removeAttribute("aria-hidden");
+        t.innerHTML = "";
+        t.textContent = text;
+        scrollDown();
+        if (cb) cb();
+      }, delay);
     }
 
-    function pickOnce(field, value) {
+    /* Seed an instant bot line (no typing), for pre-answered entries. */
+    function seedBot(text) { bubble("chat-msg--bot", text); }
+
+    function clearControls() { controls.innerHTML = ""; }
+
+    function chip(label, onTap, ghost) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "chat-chip" + (ghost ? " chat-chip--ghost" : "");
+      b.textContent = label;
+      b.addEventListener("click", onTap);
+      return b;
+    }
+
+    function setChips(items) {
+      clearControls();
+      var row = document.createElement("div");
+      row.className = "chat-chiprow";
+      items.forEach(function (it) { row.appendChild(chip(it[0], it[1], it[2])); });
+      controls.appendChild(row);
+      scrollDown();
+    }
+
+    function setTextInput(opts) {
+      clearControls();
+      var form = document.createElement("form");
+      form.className = "chat-inputrow";
+      form.setAttribute("novalidate", "novalidate");
+      var label = document.createElement("label");
+      label.className = "visually-hidden";
+      label.setAttribute("for", "vx-in");
+      label.textContent = opts.label;
+      var input = document.createElement("input");
+      input.id = "vx-in";
+      input.type = opts.type || "text";
+      input.placeholder = opts.placeholder || "";
+      input.setAttribute("autocomplete", opts.auto || "off");
+      var send = document.createElement("button");
+      send.type = "submit";
+      send.className = "chat-send";
+      send.textContent = "Send";
+      form.appendChild(label);
+      form.appendChild(input);
+      form.appendChild(send);
+      controls.appendChild(form);
+      if (opts.skip) {
+        var skiprow = document.createElement("div");
+        skiprow.className = "chat-chiprow";
+        skiprow.appendChild(chip(opts.skip, function () { opts.onSkip(); }, true));
+        controls.appendChild(skiprow);
+      }
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var v = input.value.trim();
+        var err = opts.validate ? opts.validate(v) : "";
+        if (err) { addBot(err, function () { input.focus(); }); return; }
+        opts.onSubmit(v);
+      });
+      input.focus();
+      scrollDown();
+    }
+
+    function begin() {
+      if (!state.started) { state.started = true; track("diagnostic_start", state.service || "unset"); }
+    }
+
+    /* ------------------------------ Steps -------------------------------- */
+
+    var Q1 = "What got you looking today?";
+
+    function laneChips() {
+      return Object.keys(LANES).map(function (key) {
+        return [LANES[key], function () {
+          begin();
+          state.service = key;
+          addUser(LANES[key]);
+          clearControls();
+          askScale();
+        }, key === "notsure"];
+      });
+    }
+
+    function open() {
+      var lane = param("s");
+      if (!LANES[lane] || lane === "notsure") lane = "";
+      var jumped = param("go") === "1";
+
+      if (lane && jumped) {
+        seedBot(Q1);
+        state.service = lane;
+        state.started = true;
+        track("diagnostic_start", lane);
+        addUser(LANES[lane]);
+        askScale();
+      } else if (lane) {
+        addBot("Hey, glad you stopped in. This takes about a minute and ends with a straight read on your setup.", function () {
+          addBot("You were just reading about " + LANES[lane].toLowerCase() + ". Is that where it hurts?", function () {
+            setChips([
+              ["That's the one", function () {
+                begin();
+                state.service = lane;
+                addUser("That's the one");
+                clearControls();
+                askScale();
+              }],
+              ["It's something else", function () {
+                addUser("It's something else");
+                clearControls();
+                addBot(Q1, function () { setChips(laneChips()); });
+              }, true],
+            ]);
+          });
+        });
+      } else {
+        addBot("Hey, glad you stopped in. This takes about a minute and ends with a straight read on your setup.", function () {
+          addBot("First one's easy. " + Q1, function () { setChips(laneChips()); });
+        });
+      }
+    }
+
+    function askScale() {
+      addBot("Roughly how many contracts or agreements are in play right now?", function () {
+        setChips([
+          ["Under 50", pickScale("u50")],
+          ["50 to 200", pickScale("s200")],
+          ["201 to 500", pickScale("s500")],
+          ["More than 500", pickScale("p500")],
+          ["Honestly not sure", pickScale("unsure"), true],
+        ]);
+      });
+    }
+
+    function pickScale(val) {
+      var labels = { u50: "Under 50", s200: "50 to 200", s500: "201 to 500", p500: "More than 500", unsure: "Honestly not sure" };
       return function () {
-        state[field] = value;
-        if (!state.started) {
-          state.started = true;
-          track("diagnostic_start", state.service || pageLane || "unset");
-        }
-        advance();
+        state.scale = val;
+        addUser(labels[val]);
+        clearControls();
+        var ack = "";
+        if (val === "p500" || val === "s500") ack = "That's past what one person tracks by hand.";
+        else if (val === "u50") ack = "Small enough to feel manageable. That is usually the trap.";
+        else if (val === "unsure") ack = "Fair. That answer says a lot on its own.";
+        if (ack) addBot(ack, askSymptoms);
+        else askSymptoms();
       };
     }
 
-    function render() {
-      body.innerHTML = "";
-      setProgress();
-      var lane = state.service || pageLane || "notsure";
-      var h;
-
-      if (state.step === 0) {
-        h = heading("What should we look at first?", "About a minute, six quick answers. A specialist calls within one business hour.");
-        Object.keys(LANES).forEach(function (key) {
-          body.appendChild(option(
-            LANES[key],
-            state.service === key,
-            pickOnce("service", key),
-            key === pageLane ? "This page" : ""
-          ));
-        });
-        nav(false);
-      } else if (state.step === 1) {
-        h = heading("Roughly how many contracts or agreements are in play?");
-        [["u50", "Under 50"], ["s200", "50 to 200"], ["s500", "201 to 500"], ["p500", "More than 500"], ["unsure", "Not sure"]].forEach(function (o) {
-          body.appendChild(option(o[1], state.scale === o[0], pickOnce("scale", o[0])));
-        });
-        nav(true);
-      } else if (state.step === 2) {
-        h = heading("Which of these sound familiar?", "Pick any that apply.");
-        SYMPTOMS[lane].forEach(function (o) {
-          var b = option(o[1], state.symptoms.indexOf(o[0]) !== -1, function () {
+    function askSymptoms() {
+      addBot("Which of these sound familiar? Tap everything that fits.", function () {
+        clearControls();
+        var row = document.createElement("div");
+        row.className = "chat-chiprow";
+        var opts = SYMPTOMS[state.service] || SYMPTOMS.notsure;
+        opts.forEach(function (o) {
+          var b = chip(o[1], function () {
             var idx = state.symptoms.indexOf(o[0]);
             if (idx === -1) state.symptoms.push(o[0]);
             else state.symptoms.splice(idx, 1);
-            b.setAttribute("aria-pressed", state.symptoms.indexOf(o[0]) !== -1 ? "true" : "false");
+            b.setAttribute("aria-pressed", idx === -1 ? "true" : "false");
+            b.classList.toggle("chat-chip--on", idx === -1);
           });
-          body.appendChild(b);
+          b.setAttribute("aria-pressed", "false");
+          row.appendChild(b);
         });
-        var row = nav(true);
-        var cont = el("button", "btn btn--primary", "Continue");
-        cont.type = "button";
-        cont.addEventListener("click", advance);
-        row.appendChild(cont);
-      } else if (state.step === 3) {
-        h = heading(lane === "deduction"
-          ? "When did anyone last go through the deductions line by line?"
-          : "When did anyone last reconcile the numbers against the agreements?");
-        [["year", "Within the last year"], ["three", "One to three years ago"], ["never", "Never"], ["unsure", "Not sure"]].forEach(function (o) {
-          body.appendChild(option(o[1], state.recency === o[0], pickOnce("recency", o[0])));
-        });
-        nav(true);
-      } else if (state.step === 4) {
-        h = heading("How soon do you want eyes on this?");
-        [["month", "This month"], ["quarter", "This quarter"], ["gathering", "Just gathering information"]].forEach(function (o) {
-          body.appendChild(option(o[1], state.timeline === o[0], pickOnce("timeline", o[0])));
-        });
-        nav(true);
-      } else {
-        h = heading("Last step. Who gets the results?", "A specialist reviews your answers and calls within one business hour.");
-        var form = el("form", "vx-form");
-        form.setAttribute("novalidate", "novalidate");
-
-        function field(name, label, type, required, auto) {
-          var wrap = el("div", "vx-field");
-          var lab = el("label", "", label);
-          lab.setAttribute("for", "vx-" + name);
-          var input = el("input");
-          input.type = type;
-          input.id = "vx-" + name;
-          input.name = name;
-          if (required) input.required = true;
-          if (auto) input.setAttribute("autocomplete", auto);
-          wrap.appendChild(lab);
-          wrap.appendChild(input);
-          form.appendChild(wrap);
-          return input;
-        }
-
-        var fName = field("name", "Full name", "text", true, "name");
-        var fEmail = field("email", "Work email", "email", true, "email");
-        var fPhone = field("phone", "Direct phone", "tel", true, "tel");
-        var fCompany = field("company", "Company (optional)", "text", false, "organization");
-
-        var hp = el("input", "vx-hp");
-        hp.type = "text";
-        hp.name = "website";
-        hp.tabIndex = -1;
-        hp.setAttribute("autocomplete", "off");
-        hp.setAttribute("aria-hidden", "true");
-        form.appendChild(hp);
-
-        var err = el("p", "vx-err");
-        err.setAttribute("aria-live", "polite");
-        form.appendChild(err);
-
-        var submit = el("button", "btn btn--primary btn--block", "Request a Free Assessment");
-        submit.type = "submit";
-        form.appendChild(submit);
-        form.appendChild(el("p", "vx-note", "We call within one business hour. No sequence, no spam."));
-
-        form.addEventListener("submit", function (e) {
-          e.preventDefault();
-          err.textContent = "";
-          var name = fName.value.trim();
-          var email = fEmail.value.trim();
-          var phone = fPhone.value.trim();
-          if (!name) { err.textContent = "Add your name so we know who to ask for."; fName.focus(); return; }
-          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { err.textContent = "That email does not look complete."; fEmail.focus(); return; }
-          if (phone.replace(/\D/g, "").length < 10) { err.textContent = "Add a phone number with area code so a specialist can reach you."; fPhone.focus(); return; }
-
-          var picks = pickFindings(state);
-          var payload = {
-            service: state.service,
-            scale: state.scale,
-            symptoms: state.symptoms,
-            recency: state.recency,
-            timeline: state.timeline,
-            shown: picks.shown,
-            held: picks.held,
-            name: name,
-            email: email,
-            phone: phone,
-            company: fCompany.value.trim(),
-            website: hp.value,
-            page: window.location.pathname,
-            referrer: document.referrer || "",
-            firstTouch: firstTouch(),
-            gclid: currentGclid(),
-          };
-
-          submit.disabled = true;
-          submit.textContent = "Sending...";
-
-          fetch("/api/lead", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          })
-            .then(function (r) { return r.json(); })
-            .then(function (r) {
-              if (!r || !r.ok) throw new Error("api");
-              try {
-                window.sessionStorage.setItem("vxDiag", JSON.stringify({
-                  n: name.split(" ")[0],
-                  shown: picks.shown,
-                }));
-              } catch (e2) {}
-              track("diagnostic_submit", state.service);
-              window.location.href = "/thank-you";
-            })
-            .catch(function () {
-              submit.disabled = false;
-              submit.textContent = "Request a Free Assessment";
-              err.textContent = "Your answers did not send. Call (860) 236-8002 or use the contact page and we will take it from there.";
-            });
-        });
-
-        body.appendChild(form);
-        nav(true);
-      }
-
-      if (h && state.started) h.focus({ preventScroll: true });
+        var doneRow = document.createElement("div");
+        doneRow.className = "chat-chiprow chat-chiprow--done";
+        doneRow.appendChild(chip("That's everything", function () {
+          var chosen = (SYMPTOMS[state.service] || SYMPTOMS.notsure)
+            .filter(function (o) { return state.symptoms.indexOf(o[0]) !== -1; })
+            .map(function (o) { return o[1]; });
+          addUser(chosen.length ? chosen.join(". ") : "None of those, honestly");
+          clearControls();
+          var ack = "";
+          if (!chosen.length) ack = "Either it's airtight or nobody has looked. Both are worth knowing for sure.";
+          else if (chosen.length >= 2) ack = "That combination shows up together for a reason.";
+          if (ack) addBot(ack, askRecency);
+          else askRecency();
+        }));
+        controls.appendChild(row);
+        controls.appendChild(doneRow);
+        scrollDown();
+      });
     }
 
-    render();
+    function askRecency() {
+      var q = state.service === "deduction"
+        ? "When did anyone last go through the deductions line by line?"
+        : "When did anyone last reconcile the numbers against the agreements themselves?";
+      addBot(q, function () {
+        setChips([
+          ["Within the last year", pickRecency("year")],
+          ["One to three years ago", pickRecency("three")],
+          ["Never", pickRecency("never")],
+          ["Not sure", pickRecency("unsure"), true],
+        ]);
+      });
+    }
+
+    function pickRecency(val) {
+      var labels = { year: "Within the last year", three: "One to three years ago", never: "Never", unsure: "Not sure" };
+      return function () {
+        state.recency = val;
+        addUser(labels[val]);
+        clearControls();
+        var ack = "";
+        if (val === "never") ack = "That's usually where it hides.";
+        else if (val === "unsure") ack = "Unknown usually means never. Worth knowing for sure.";
+        else if (val === "three") ack = "A lot can drift in that window.";
+        if (ack) addBot(ack, askTimeline);
+        else askTimeline();
+      };
+    }
+
+    function askTimeline() {
+      addBot("Last quick one before I run this. How soon do you want eyes on it?", function () {
+        setChips([
+          ["This month", pickTimeline("month")],
+          ["This quarter", pickTimeline("quarter")],
+          ["Just gathering info", pickTimeline("gathering"), true],
+        ]);
+      });
+    }
+
+    function pickTimeline(val) {
+      var labels = { month: "This month", quarter: "This quarter", gathering: "Just gathering info" };
+      return function () {
+        state.timeline = val;
+        addUser(labels[val]);
+        clearControls();
+        if (val === "month") addBot("Good. Speed matters with this stuff.", askName);
+        else askName();
+      };
+    }
+
+    function askName() {
+      addBot("Alright, I can run your read now. Who do I make it out to?", function () {
+        setTextInput({
+          label: "Full name", placeholder: "Full name", auto: "name",
+          validate: function (v) { return v ? "" : "I need a name to put on the assessment."; },
+          onSubmit: function (v) {
+            state.name = v;
+            state.first = v.split(" ")[0];
+            addUser(v);
+            askEmail();
+          },
+        });
+      });
+    }
+
+    function askEmail() {
+      addBot("Thanks, " + state.first + ". Work email for the summary?", function () {
+        setTextInput({
+          label: "Work email", type: "email", placeholder: "name@company.com", auto: "email",
+          validate: function (v) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? "" : "That email looks short a piece. One more time?";
+          },
+          onSubmit: function (v) { state.email = v; addUser(v); askPhone(); },
+        });
+      });
+    }
+
+    function askPhone() {
+      addBot("And the best direct number? A specialist calls within one business hour. No sequence, no spam.", function () {
+        setTextInput({
+          label: "Direct phone", type: "tel", placeholder: "(555) 555-0100", auto: "tel",
+          validate: function (v) {
+            return v.replace(/\D/g, "").length >= 10 ? "" : "I need a number with area code so the call actually lands.";
+          },
+          onSubmit: function (v) { state.phone = v; addUser(v); askCompany(); },
+        });
+      });
+    }
+
+    function askCompany() {
+      addBot("Company name? Skip it if you'd rather not.", function () {
+        setTextInput({
+          label: "Company", placeholder: "Company", auto: "organization",
+          skip: "Skip", onSkip: function () { addUser("Skip"); submitLead(); },
+          onSubmit: function (v) { state.company = v; if (v) addUser(v); submitLead(); },
+        });
+      });
+    }
+
+    function submitLead() {
+      clearControls();
+      state.picks = pickFindings(state);
+      var payload = {
+        service: state.service, scale: state.scale, symptoms: state.symptoms,
+        recency: state.recency, timeline: state.timeline,
+        shown: state.picks.shown, held: state.picks.held,
+        name: state.name, email: state.email, phone: state.phone, company: state.company,
+        website: "",
+        page: window.location.pathname + window.location.search,
+        referrer: document.referrer || "",
+        firstTouch: firstTouch(),
+        gclid: currentGclid(),
+      };
+      addBot("Give me a second. Running your answers now...", function () {
+        fetch("/api/lead", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (r) {
+            if (!r || !r.ok) throw new Error("api");
+            try {
+              window.sessionStorage.setItem("vxDiag", JSON.stringify({ n: state.first, shown: state.picks.shown }));
+            } catch (e) {}
+            track("diagnostic_submit", state.service);
+            reveal();
+          })
+          .catch(fail);
+      }, reduce ? 0 : 900);
+    }
+
+    function reveal() {
+      var shown = state.picks.shown;
+      var lead = shown.length > 1 ? ", two things stand out:" : ", one thing stands out:";
+      addBot(state.first + lead, function () {
+        var i = 0;
+        function nextFinding() {
+          if (i < shown.length) {
+            var f = FINDINGS[shown[i]];
+            i += 1;
+            var b = document.createElement("div");
+            b.className = "chat-msg chat-msg--bot chat-msg--finding";
+            var n = document.createElement("span");
+            n.className = "chat-finding__n";
+            n.textContent = "0" + i;
+            b.appendChild(n);
+            b.appendChild(document.createTextNode(f.text + " " + f.cost));
+            log.appendChild(b);
+            scrollDown();
+            window.setTimeout(nextFinding, reduce ? 40 : 700);
+          } else {
+            addBot("There's more in here, and the useful half needs your agreements open next to a specialist. We call you within one business hour, or grab a time now and skip the phone tag.", function () {
+              setChips([
+                ["Book a time now", function () { window.location.href = "/thank-you"; }],
+                ["The call works for me", function () { window.location.href = "/thank-you"; }, true],
+              ]);
+            });
+          }
+        }
+        nextFinding();
+      });
+    }
+
+    function fail() {
+      addBot("Something on my end did not send. Call (860) 236-8002 or use the contact page and we will take it from there.", function () {
+        setChips([
+          ["Call (860) 236-8002", function () { window.location.href = "tel:+18602368002"; }],
+          ["Open the contact page", function () { window.location.href = "contact.html"; }, true],
+          ["Try again", function () { submitLead(); }, true],
+        ]);
+      });
+    }
+
+    open();
   }
 
-  /* --------------------------- Thank-you reveal -------------------------- */
+  /* --------------------------- Thank-you recap --------------------------- */
 
   function buildReveal(mount) {
     var raw;
@@ -518,6 +679,13 @@
     var data;
     try { data = JSON.parse(raw); } catch (e) { return; }
     if (!data || !data.shown || !data.shown.length) return;
+
+    function el(tag, cls, text) {
+      var n = document.createElement(tag);
+      if (cls) n.className = cls;
+      if (text) n.textContent = text;
+      return n;
+    }
 
     var box = el("div", "vx-reveal");
     box.appendChild(el("p", "vx-reveal__eyebrow", "From your answers"));
@@ -545,8 +713,7 @@
   /* ------------------------------- Boot ---------------------------------- */
 
   firstTouch();
-  var cardMount = document.getElementById("vx-diagnostic");
-  if (cardMount) buildCard(cardMount);
+  if (document.getElementById("vx-chat")) buildChat();
   var revealMount = document.getElementById("vx-reveal");
   if (revealMount) buildReveal(revealMount);
 })();
