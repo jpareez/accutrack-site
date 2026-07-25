@@ -57,11 +57,31 @@ export async function onRequestGet(context) {
     return json({ ok: false, error: "calendar-bad-response" });
   }
 
+  /* Curate availability: deterministic thinning (stable across refreshes)
+     plus a per-day cap, spread across the day. Reads intentional, not empty. */
+  function keepSlot(iso) {
+    let h = 0;
+    for (let i = 0; i < iso.length; i++) h = (h * 31 + iso.charCodeAt(i)) >>> 0;
+    return h % 100 < 55;
+  }
+  function curate(raw) {
+    let kept = raw.filter(keepSlot);
+    if (!kept.length) kept = raw.slice(0, 1);
+    if (kept.length > 7) {
+      const picked = [];
+      for (let i = 0; i < 7; i++) {
+        const idx = Math.round((i * (kept.length - 1)) / 6);
+        if (picked.indexOf(kept[idx]) === -1) picked.push(kept[idx]);
+      }
+      kept = picked;
+    }
+    return kept;
+  }
   const days = [];
   Object.keys(body).forEach((key) => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return;
     const slots = body[key] && Array.isArray(body[key].slots) ? body[key].slots : [];
-    if (slots.length) days.push({ date: key, slots: slots.slice(0, 12) });
+    if (slots.length) days.push({ date: key, slots: curate(slots) });
   });
   days.sort((a, b) => (a.date < b.date ? -1 : 1));
   return json({ ok: true, tz, days: days.slice(0, 10) });
