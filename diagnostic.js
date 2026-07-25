@@ -852,31 +852,46 @@
       });
     }
 
-    /* The processing moment: one status bubble cycling through real stages. */
-    function runTheater(cb) {
-      var stages = ["Reading your answers...", "Matching the pattern against portfolios like yours...", "Sizing the exposure..."];
-      var b = document.createElement("div");
-      b.className = "chat-msg chat-msg--bot chat-msg--status";
-      var dots = document.createElement("span");
-      dots.className = "chat-typing chat-typing--inline";
-      dots.innerHTML = "<i></i><i></i><i></i>";
-      var label = document.createElement("span");
-      b.appendChild(dots);
-      b.appendChild(label);
-      log.appendChild(b);
-      scrollDown();
-      var i = 0;
-      function step() {
-        if (i < stages.length) {
-          label.textContent = " " + stages[i];
-          i += 1;
-          window.setTimeout(step, reduce ? 80 : 1000);
-        } else {
-          b.remove();
-          cb();
-        }
+    /* ---------------- Results takeover (post-capture) ------------------ */
+
+    var HERO_STAT = {
+      m1: ["$35K to $250K", "estimated unverified flow, per year", "If the 15 to 25 percent audit-study range holds on your reported flow."],
+      m5: ["$150K to $1M", "estimated unverified flow, per year", "If the 15 to 25 percent audit-study range holds on your reported flow."],
+      m5p: ["$750K+", "estimated unverified flow at the conservative end, per year", "If the 15 to 25 percent audit-study range holds on your reported flow."],
+      m500: ["$10K to $50K", "recoverable at even a one-in-ten contest rate", "Industry data on CPG deductions; the math shown is one contested dollar in ten."],
+      m2: ["$50K to $200K", "recoverable at even a one-in-ten contest rate", "Industry data on CPG deductions; the math shown is one contested dollar in ten."],
+      m2p: ["$200K+", "recoverable at even a one-in-ten contest rate", "Industry data on CPG deductions; the math shown is one contested dollar in ten."],
+    };
+
+    function clientScore() {
+      var s2 = 2;
+      s2 += { u25: 0, s100: 1, s250: 2, s500: 2, p500: 3, unsure: 1 }[state.scale] || 0;
+      s2 += Math.min(state.symptoms.length, 2);
+      s2 += { year: 0, three: 1, never: 2, unsure: 1 }[state.recency] || 0;
+      s2 += { month: 2, quarter: 1, gathering: 0 }[state.timeline] || 0;
+      s2 += { m5: 1, m5p: 1, m2: 1, m2p: 1, unknown: 1 }[state.exposure] || 0;
+      return Math.max(1, Math.min(10, s2));
+    }
+
+    function severity() {
+      var sc = clientScore();
+      if (sc >= 8) return ["high", "High exposure", "The pattern in your answers is the one that usually means money is already leaking."];
+      if (sc >= 5) return ["elevated", "Elevated exposure", "More than one leak signal showed up in your answers."];
+      return ["low", "Worth a proper look", "A few things worth confirming before they grow."];
+    }
+
+    function proofLine() {
+      if (state.service === "deduction") {
+        return "Recovery is the original work here. Accu-Track started in 1990 getting back money retailers were quietly holding off CPG invoices.";
       }
-      step();
+      return "Our reconciliation work surfaced $27.6M for one client in four months, on an inherited licensing portfolio.";
+    }
+
+    function el(tag, cls, text) {
+      var n = document.createElement(tag);
+      if (cls) n.className = cls;
+      if (text) n.textContent = text;
+      return n;
     }
 
     function submitLead() {
@@ -894,13 +909,17 @@
         firstTouch: firstTouch(),
         gclid: currentGclid(),
       };
+      state.apiDone = false;
       fetch("/api/lead", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       })
         .then(function (r) { return r.json(); })
-        .then(function (r) { state.crmOk = !!(r && r.ok); })
+        .then(function (r) {
+          state.crmOk = !!(r && r.ok);
+          state.contactId = (r && r.contactId) || "";
+        })
         .catch(function () { state.crmOk = false; })
         .then(function () {
           if (state.crmOk) {
@@ -910,68 +929,213 @@
           try {
             window.sessionStorage.setItem("vxDiag", JSON.stringify({ n: state.first, shown: state.picks.shown, a: state }));
           } catch (e) {}
+          state.apiDone = true;
         });
-      runTheater(reveal);
+      addBot("That's everything I need, " + state.first + ". Running your read now.", startTakeover);
     }
 
-    function reveal() {
-      var shown = state.picks.shown;
-      var lead = shown.length > 1 ? ", here's the preview of your read. Two things stand out:" : ", here's the preview of your read. One thing stands out:";
-      addBot(state.first + lead, function () {
-        var i = 0;
-        function nextFinding() {
-          if (i < shown.length) {
-            var text = findingText(shown[i], state);
-            i += 1;
-            var b = document.createElement("div");
-            b.className = "chat-msg chat-msg--bot chat-msg--finding";
-            var n = document.createElement("span");
-            n.className = "chat-finding__n";
-            n.textContent = "0" + i;
-            b.appendChild(n);
-            b.appendChild(document.createTextNode(text));
-            log.appendChild(b);
-            scrollDown();
-            window.setTimeout(nextFinding, reduce ? 40 : 800);
-          } else {
-            closeOut();
-          }
+    function startTakeover() {
+      var overlay = el("div", "vx-results");
+      overlay.id = "vx-results";
+      var stage = el("div", "vx-analyzing");
+      var rings = el("div", "vx-rings");
+      rings.innerHTML = "<i></i><i></i><i></i>";
+      var status = el("p", "vx-analyzing__status", "Reading your answers");
+      var bar = el("div", "vx-analyzing__bar");
+      var fill = el("i");
+      bar.appendChild(fill);
+      stage.appendChild(rings);
+      stage.appendChild(status);
+      stage.appendChild(bar);
+      overlay.appendChild(stage);
+      document.body.appendChild(overlay);
+      document.body.classList.add("vx-locked");
+
+      var stages = ["Reading your answers", "Matching the pattern against portfolios your size", "Sizing the exposure"];
+      var stepMs = reduce ? 120 : 1150;
+      var i = 0;
+      function step() {
+        if (i < stages.length) {
+          status.textContent = stages[i];
+          fill.style.width = (((i + 1) / (stages.length + 1)) * 100) + "%";
+          i += 1;
+          window.setTimeout(step, stepMs);
+        } else {
+          status.textContent = "Preview ready";
+          fill.style.width = "100%";
+          waitForApi(0);
         }
-        nextFinding();
-      });
-    }
-
-    function proofLine() {
-      if (state.service === "deduction") {
-        return "For context: recovery is the original work here. Accu-Track started in 1990 getting back money retailers were quietly holding off CPG invoices.";
       }
-      return "For context: our reconciliation work surfaced $27.6M for one client in four months, on an inherited licensing portfolio.";
+      function waitForApi(waited) {
+        if (state.apiDone || waited > 7000) buildReport(overlay);
+        else window.setTimeout(function () { waitForApi(waited + 250); }, 250);
+      }
+      step();
     }
 
-    function closeOut() {
-      addBot(proofLine(), function () {
-        var line = state.crmOk
-          ? "The full read needs your agreements open next to a specialist, and that's a 30-minute call, no pitch. A specialist calls you within one business hour. If you'd rather pick the moment, grab a time here:"
-          : "The full read needs your agreements open next to a specialist, and that's a 30-minute call, no pitch. Grab a time below and it's locked. Or call us direct at (860) 236-8002.";
-        addBot(line, function () {
-          var w = document.createElement("div");
-          w.className = "chat-msg chat-msg--bot chat-msg--widget";
-          w.innerHTML = '<iframe src="https://api.leadconnectorhq.com/widget/booking/zqY1dBbeXQwIKC3tmeS9" style="width:100%; min-height:760px; border:none; overflow:hidden; display:block; border-radius:8px;" scrolling="no" id="vx-booking-widget" title="Book your free assessment"></iframe>';
-          log.appendChild(w);
-          scrollDown();
-          var items = state.crmOk
-            ? [["I'll take the call", function () {
-                clearControls();
-                addBot("Done. Keep the phone close, " + state.first + ". Talk soon.");
-              }, true]]
-            : [["Call (860) 236-8002", function () { window.location.href = "tel:+18602368002"; }],
-               ["I booked a time", function () {
-                clearControls();
-                addBot("Locked in. Talk soon, " + state.first + ".");
-              }, true]];
-          setChips(items);
+    function buildReport(overlay) {
+      overlay.innerHTML = "";
+      var inner = el("div", "vx-results__inner");
+      inner.appendChild(el("p", "vx-results__eyebrow", "Free Assessment · Preview"));
+      inner.appendChild(el("h1", "vx-results__h1", state.first + ", here's what stands out."));
+
+      var sev = severity();
+      var band = el("div", "vx-sev vx-sev--" + sev[0]);
+      band.appendChild(el("span", "vx-sev__label", sev[1]));
+      band.appendChild(el("span", "vx-sev__line", sev[2]));
+      inner.appendChild(band);
+
+      var heroKey = "";
+      if (state.picks.shown.indexOf("f_flow_gap") !== -1) heroKey = state.exposure;
+      if (state.picks.shown.indexOf("f_ded_exposure") !== -1) heroKey = state.exposure;
+      if (heroKey && HERO_STAT[heroKey]) {
+        var hs = HERO_STAT[heroKey];
+        var hero = el("div", "vx-hero");
+        hero.appendChild(el("div", "vx-hero__num", hs[0]));
+        hero.appendChild(el("div", "vx-hero__label", hs[1]));
+        hero.appendChild(el("div", "vx-hero__attr", hs[2]));
+        inner.appendChild(hero);
+      }
+
+      for (var i = 0; i < state.picks.shown.length; i++) {
+        var card = el("div", "vx-rcard");
+        card.appendChild(el("span", "vx-rcard__n", "0" + (i + 1)));
+        card.appendChild(el("p", "", findingText(state.picks.shown[i], state)));
+        inner.appendChild(card);
+      }
+
+      if (state.picks.held.length) {
+        inner.appendChild(el("div", "vx-held",
+          "+" + state.picks.held.length + " more finding" + (state.picks.held.length > 1 ? "s" : "") +
+          " in the full read. They need your agreements open next to a specialist."));
+      }
+
+      inner.appendChild(el("p", "vx-proof", proofLine()));
+
+      var cta = el("div", "vx-cta");
+      cta.appendChild(el("h2", "", "Get the full read"));
+      cta.appendChild(el("p", "vx-cta__line", state.crmOk
+        ? "A specialist calls you within one business hour. Want to pick the moment instead? Grab a time:"
+        : "Pick a time below and it's locked. Or call us direct at (860) 236-8002."));
+      var cal = el("div", "vx-cal");
+      cal.id = "vx-cal";
+      cta.appendChild(cal);
+      var phone = el("p", "vx-phone-note");
+      phone.innerHTML = 'Rather talk now? <a href="tel:+18602368002">(860) 236-8002</a>';
+      cta.appendChild(phone);
+      inner.appendChild(cta);
+
+      overlay.appendChild(inner);
+      overlay.scrollTop = 0;
+      initCalendar(cal);
+    }
+
+    /* ------------------------- Calendar picker -------------------------- */
+
+    function widgetFallback(mount, note) {
+      mount.innerHTML = "";
+      if (note) mount.appendChild(el("p", "vx-cal__note", note));
+      var wrap = el("div", "vx-cal__widget");
+      wrap.innerHTML = '<iframe src="https://api.leadconnectorhq.com/widget/booking/zqY1dBbeXQwIKC3tmeS9" style="width:100%; min-height:760px; border:none; overflow:hidden; display:block; border-radius:8px;" scrolling="no" id="vx-booking-widget" title="Book your free assessment"></iframe>';
+      mount.appendChild(wrap);
+    }
+
+    function initCalendar(mount) {
+      if (!state.crmOk || !state.contactId) {
+        widgetFallback(mount);
+        return;
+      }
+      mount.appendChild(el("p", "vx-cal__note", "Loading times..."));
+      var tz = "America/New_York";
+      try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || tz; } catch (e) {}
+      fetch("/api/slots?tz=" + encodeURIComponent(tz))
+        .then(function (r) { return r.json(); })
+        .then(function (r) {
+          if (!r || !r.ok || !r.days || !r.days.length) throw new Error("slots");
+          renderPicker(mount, r.days);
+        })
+        .catch(function () { widgetFallback(mount); });
+    }
+
+    function renderPicker(mount, days) {
+      mount.innerHTML = "";
+      var sel = { day: null, slot: "" };
+      var dayRow = el("div", "vx-cal__days chat-chiprow");
+      var timeWrap = el("div", "vx-cal__timewrap");
+      var confirmWrap = el("div", "vx-cal__confirm");
+
+      function fmtDay(dateStr) {
+        var d = new Date(dateStr + "T12:00:00");
+        return d.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
+      }
+      function fmtTime(iso) {
+        return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+      }
+
+      function renderTimes(day) {
+        timeWrap.innerHTML = "";
+        confirmWrap.innerHTML = "";
+        var row = el("div", "vx-cal__times chat-chiprow");
+        day.slots.forEach(function (iso) {
+          var b = el("button", "chat-chip", fmtTime(iso));
+          b.type = "button";
+          b.addEventListener("click", function () {
+            sel.slot = iso;
+            Array.prototype.forEach.call(row.children, function (c) { c.classList.remove("chat-chip--on"); });
+            b.classList.add("chat-chip--on");
+            renderConfirm(day, iso);
+          });
+          row.appendChild(b);
         });
+        timeWrap.appendChild(row);
+      }
+
+      function renderConfirm(day, iso) {
+        confirmWrap.innerHTML = "";
+        var btn = el("button", "btn btn--primary btn--block", "Lock in " + fmtDay(day.date) + " at " + fmtTime(iso));
+        btn.type = "button";
+        btn.addEventListener("click", function () {
+          btn.disabled = true;
+          btn.textContent = "Booking...";
+          fetch("/api/book", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ contactId: state.contactId, startTime: iso }),
+          })
+            .then(function (r) { return r.json(); })
+            .then(function (r) {
+              if (!r || !r.ok) throw new Error("book");
+              mount.innerHTML = "";
+              var done = el("div", "vx-booked");
+              done.appendChild(el("p", "vx-booked__head", "Booked. " + fmtDay(day.date) + " at " + fmtTime(iso) + "."));
+              done.appendChild(el("p", "vx-booked__sub", "A confirmation is on its way to " + state.email + ". Keep your agreements handy for the call, " + state.first + "."));
+              mount.appendChild(done);
+              track("diagnostic_booked", state.service);
+            })
+            .catch(function () {
+              widgetFallback(mount, "That time didn't lock. Grab one below instead:");
+            });
+        });
+        confirmWrap.appendChild(btn);
+      }
+
+      days.forEach(function (day, idx) {
+        var b = el("button", "chat-chip", fmtDay(day.date));
+        b.type = "button";
+        b.addEventListener("click", function () {
+          sel.day = day;
+          Array.prototype.forEach.call(dayRow.children, function (c) { c.classList.remove("chat-chip--on"); });
+          b.classList.add("chat-chip--on");
+          renderTimes(day);
+        });
+        dayRow.appendChild(b);
+        if (idx === 0) { sel.day = day; b.classList.add("chat-chip--on"); renderTimes(day); }
       });
+
+      mount.appendChild(el("p", "vx-cal__label", "Pick a day"));
+      mount.appendChild(dayRow);
+      mount.appendChild(timeWrap);
+      mount.appendChild(confirmWrap);
     }
 
     open();

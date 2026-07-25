@@ -286,7 +286,7 @@ async function handlePost(context) {
     // Contact exists; a lost note must not lose the lead. Continue.
   }
 
-  return json({ ok: true });
+  return json({ ok: true, contactId: contactId });
 }
 
 export function onRequest(context) {
