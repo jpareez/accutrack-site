@@ -1,8 +1,10 @@
-/* Accu-Track free-assessment conversation.
-   Runs full-screen on assessment.html (#vx-chat) and renders the findings
-   recap on thank-you.html (#vx-reveal). Answers are tap-chips and short
-   text turns; the diagnosis is rule-mapped from vetted copy. Pre-rendered
-   noscript fallback points to contact.html; nothing else depends on JS. */
+/* Accu-Track free-assessment conversation, v3.
+   Grounded in the persona simulation (Clients/accu-track vault): question one
+   is the prospect's situation, symptoms use the account's real vocabulary,
+   an exposure range makes the findings computable, and the booking widget
+   lands in-chat after the reveal. Diagnosis is rule-mapped from vetted copy;
+   proof lines are lane-locked ($27.6M never on the deduction lane).
+   Runs on assessment.html (#vx-chat) + thank-you.html recap (#vx-reveal). */
 (function () {
   "use strict";
 
@@ -10,36 +12,81 @@
 
   /* ------------------------------ Data ---------------------------------- */
 
-  var LANES = {
+  /* Situations: [key, chip label, lane it implies, ack]. */
+  var SITS = {
+    sit_light: ["Royalty checks look lighter than they should", "royalty",
+      "That's usually the first visible tell. The cause sits a few layers down."],
+    sit_late: ["Statements show up late or not at all", "licensing",
+      "Late statements are rarely a mail problem."],
+    sit_surprise: ["A renewal or deadline caught us off guard", "licensing",
+      "Once is a fluke. What's behind it usually isn't."],
+    sit_inherit: ["We're acquiring, and agreements keep piling up", "contract",
+      "The deal team leaves. The agreements stay. That pile is where the biggest recoveries start."],
+    sit_pile: ["Contracts are piling up faster than we can track them", "contract",
+      "Past a certain count it stops being a diligence problem and becomes a structure problem."],
+    sit_slip: ["Renewals keep slipping past us", "contract",
+      "The miss never announces itself. It shows up on an invoice later."],
+    sit_clm: ["We priced contract software and it didn't add up", "contract",
+      "The platform is the visible cost. The people to run it are the real one."],
+    sit_trust: ["We take the licensees' math on trust", "royalty",
+      "Trust is how these agreements are designed to run. It's also where they leak."],
+    sit_stopped: ["A licensee has gone quiet on reporting", "royalty",
+      "Silence is expensive. It usually reads as nothing owed, and the agreement says otherwise."],
+    sit_audit: ["Weighing a formal royalty audit", "royalty",
+      "There's a lighter first step than lawyers. More on that in a minute."],
+    sit_deduct: ["Retailers keep taking money off our invoices", "deduction",
+      "And contesting them is a full-time job nobody was hired for."],
+    sit_otif: ["OTIF fines and chargebacks are stacking up", "deduction",
+      "They land faster than a team can review them. That pace gap is the whole game."],
+    sit_sizing: ["Trying to size what we lose to deductions a year", "deduction",
+      "Good instinct. The estimate is almost always smaller than the number."],
+    sit_compliance: ["Licensing compliance needs to get under control", "licensing",
+      "Good timing matters here. The gap grows a little every quarter."],
+    sit_ahead: ["Just getting ahead of it", "",
+      "Smart. This is cheaper than the other way."],
+  };
+
+  var LANE_SITS = {
+    licensing: ["sit_light", "sit_late", "sit_surprise", "sit_inherit", "sit_ahead"],
+    contract: ["sit_pile", "sit_slip", "sit_clm", "sit_inherit", "sit_ahead"],
+    royalty: ["sit_light", "sit_stopped", "sit_trust", "sit_audit", "sit_ahead"],
+    deduction: ["sit_deduct", "sit_otif", "sit_sizing", "sit_ahead"],
+    cross: ["sit_light", "sit_pile", "sit_deduct", "sit_compliance", "sit_inherit", "sit_ahead"],
+  };
+
+  var LANE_LABELS = {
     licensing: "Licensing compliance",
     contract: "Contract management",
     royalty: "Royalty reporting",
     deduction: "Deduction recovery",
-    notsure: "Not sure yet",
+    notsure: "General",
   };
 
   var SYMPTOMS = {
     licensing: [
-      ["lic_late", "Royalty reports show up late or not at all"],
-      ["lic_mismatch", "The numbers never quite match the agreement"],
+      ["lic_facevalue", "We take the licensees' numbers at face value"],
+      ["lic_minimums", "Minimum guarantees nobody is actually checking"],
       ["lic_spreadsheet", "Renewals and deadlines live in a spreadsheet"],
-      ["lic_capacity", "Nobody has time to check any of it"],
+      ["lic_memory", "Compliance lives in one person's memory"],
+      ["lic_stopped", "At least one licensee has gone quiet"],
     ],
     contract: [
       ["con_renewals", "Renewal dates slip past before anyone notices"],
       ["con_inbox", "Obligations live in inboxes and memory"],
       ["con_visibility", "Nobody can say what is due this month"],
+      ["con_memory", "The tracking lives in one person's head"],
       ["con_volume", "The volume outgrew the person watching it"],
     ],
     royalty: [
-      ["roy_late", "Reports arrive late or incomplete"],
+      ["roy_late", "Statements arrive late or incomplete"],
       ["roy_facevalue", "We take the licensee's math at face value"],
       ["roy_suspicion", "Short payments are a suspicion, not a number"],
       ["roy_audit", "A formal audit feels too heavy to start"],
     ],
     deduction: [
       ["ded_pace", "Deductions hit faster than we can review them"],
-      ["ded_fines", "Shortage fines and chargebacks pile up"],
+      ["ded_fines", "OTIF fines and vendor chargebacks pile up"],
+      ["ded_postaudit", "Post-audit claims land months after the sale"],
       ["ded_writeoff", "We dispute a few and write off the rest"],
       ["ded_unknown", "Nobody knows the true annual total"],
     ],
@@ -51,157 +98,321 @@
     ],
   };
 
-  /* Findings: text + cost line. "group" prevents two findings citing the
-     same source from appearing together. Every number here is attributed
-     and already vetted site copy. */
+  /* Exposure ranges. type "flow" = annual value through the agreements;
+     type "ded" = annual deductions taken. */
+  var EXPOSURE = {
+    flow: [
+      ["u250", "Under $250K"],
+      ["m1", "$250K to $1M"],
+      ["m5", "$1M to $5M"],
+      ["m5p", "More than $5M"],
+      ["skip", "Rather not say", true],
+    ],
+    ded: [
+      ["u100", "Under $100K"],
+      ["m500", "$100K to $500K"],
+      ["m2", "$500K to $2M"],
+      ["m2p", "More than $2M"],
+      ["unknown", "Nobody knows exactly", true],
+    ],
+  };
+
+  /* Floored, hedged math for the reveal. Low end of the Invotex 15-25% range
+     applied to the low end of the band; conservative on purpose. */
+  var FLOW_MATH = {
+    m1: "on your flow that's roughly $35K to $250K a year sitting unverified",
+    m5: "on your flow that's roughly $150K to $1M a year sitting unverified",
+    m5p: "on your flow that's several hundred thousand a year at the conservative end",
+  };
+  var DED_MATH = {
+    m500: "even a tenth of that contested successfully is $10K to $50K back",
+    m2: "even a tenth of that contested successfully is $50K to $200K back",
+    m2p: "even a tenth of that contested successfully is $200K or more back",
+  };
+
+  /* Findings: functions of the answers so the money math can personalize.
+     "group" prevents two findings citing the same study from stacking. */
   var FINDINGS = {
+    f_flow_gap: {
+      group: "study",
+      make: function (a) {
+        return {
+          text: "Licensees self-report and nobody on your side is reconciling the numbers against the agreements. A 20-year study of licensee audits found gaps of 15 to 25 percent where that check is missing.",
+          cost: "If that range holds, " + (FLOW_MATH[a.exposure] || "the unverified slice of your flow is real money") + ".",
+        };
+      },
+    },
     f_reconcile_gap: {
       group: "study",
-      text: "Nothing here says anyone is checking what licensees report against what the agreements say.",
-      cost: "A 20-year study of licensee audits found gaps of 15 to 25 percent on portfolios where that check is missing.",
+      make: function () {
+        return {
+          text: "Nothing here says anyone is checking what licensees report against what the agreements say.",
+          cost: "A 20-year study of licensee audits found gaps of 15 to 25 percent on portfolios where that check is missing.",
+        };
+      },
     },
-    f_lic_late: {
-      text: "Late or missing royalty reports are the first visible sign of a reporting process nobody owns.",
-      cost: "The reports that do arrive get taken at face value, and that is where the money leaks.",
+    f_facevalue: {
+      group: "study",
+      make: function () {
+        return {
+          text: "Licensees calculate their own royalties, and those numbers are being taken at face value.",
+          cost: "A 20-year study of licensee audits puts the gap at 15 to 25 percent where reporting breaks.",
+        };
+      },
     },
-    f_lic_mismatch: {
-      text: "Reported numbers that never quite tie back to the agreement point to a structural gap in how royalties get calculated.",
-      cost: "Without reconciliation the shortfall compounds quietly from one royalty period to the next.",
+    f_stopped: {
+      make: function () {
+        return {
+          text: "A licensee gone quiet on reporting is the loudest signal in this whole intake. Silence usually gets read as nothing owed.",
+          cost: "The agreement says otherwise, and the gap compounds every quarter it runs.",
+        };
+      },
+    },
+    f_minimums: {
+      make: function () {
+        return {
+          text: "Minimum guarantees are contracted revenue, and nobody is checking whether they're being met.",
+          cost: "An unchecked minimum quietly becomes optional for the licensee. A missed one is pure revenue left on the table.",
+        };
+      },
+    },
+    f_memory: {
+      make: function () {
+        return {
+          text: "The compliance picture lives in one person's memory, and it holds exactly as long as that person stays.",
+          cost: "Every departure risk is also a portfolio risk. That is a structural exposure, not a people problem.",
+        };
+      },
+    },
+    f_inherit: {
+      make: function () {
+        return {
+          text: "An inherited portfolio with no central record is where the biggest recoveries start. Nobody knows who is compliant, so nobody collects.",
+          cost: "Our reconciliation work on one inherited portfolio surfaced $27.6M in four months. The pattern scales down.",
+        };
+      },
+    },
+    f_clm: {
+      make: function () {
+        return {
+          text: "You already did the math on contract software: the platform still needs people to run it.",
+          cost: "That staffing line is the cost everyone discovers after the subscription starts. A team skips the platform entirely.",
+        };
+      },
     },
     f_spreadsheet: {
-      text: "Your deadlines depend on a person remembering to open a spreadsheet at the right time.",
-      cost: "The miss never announces itself. It surfaces months later, already expensive.",
-    },
-    f_capacity: {
-      text: "The portfolio has outgrown the hours anyone can give it, and obligations slip at exactly that point.",
-      cost: "The slipping is quiet. That is what makes it expensive.",
+      make: function () {
+        return {
+          text: "Your deadlines depend on a person remembering to open a spreadsheet at the right time.",
+          cost: "The miss never announces itself. It surfaces months later, already expensive.",
+        };
+      },
     },
     f_con_renewals: {
-      text: "Renewal dates that slip past unnoticed are the most expensive habit in contract admin.",
-      cost: "An unwanted auto-renewal costs money. A lapsed agreement costs more.",
+      make: function () {
+        return {
+          text: "Renewal dates that slip past unnoticed are the most expensive habit in contract admin.",
+          cost: "An unwanted auto-renewal costs money. A lapsed agreement costs more.",
+        };
+      },
     },
     f_con_inbox: {
-      text: "Your obligations live in inboxes and individual memory.",
-      cost: "That holds until the one person who remembers is away the week it matters.",
+      make: function () {
+        return {
+          text: "Your obligations live in inboxes and individual memory.",
+          cost: "That holds until the one person who remembers is away the week it matters.",
+        };
+      },
     },
     f_con_visibility: {
-      text: "If nobody can say what is due this month, some of it is already being missed.",
-      cost: "Those misses stay invisible until one of them lands on an invoice.",
+      make: function () {
+        return {
+          text: "If nobody can say what is due this month, some of it is already being missed.",
+          cost: "Those misses stay invisible until one of them lands on an invoice.",
+        };
+      },
     },
     f_con_volume: {
-      text: "The agreement count has passed what one person can track by hand.",
-      cost: "Past that point a miss stops being a question of if.",
-    },
-    f_roy_facevalue: {
-      group: "study",
-      text: "Licensees calculate their own royalties, and right now those numbers are being taken at face value.",
-      cost: "A 20-year study of licensee audits puts the gap at 15 to 25 percent where reporting breaks.",
+      make: function () {
+        return {
+          text: "The agreement count has passed what one person can track by hand.",
+          cost: "Past that point a miss stops being a question of if.",
+        };
+      },
     },
     f_roy_suspicion: {
-      text: "A shortfall you suspect but have never quantified tends to grow until someone runs the numbers.",
-      cost: "Reconciliation turns the suspicion into a figure you can collect on.",
+      make: function () {
+        return {
+          text: "A shortfall you suspect but have never quantified tends to grow until someone runs the numbers.",
+          cost: "Reconciliation turns the suspicion into a figure you can collect on.",
+        };
+      },
     },
     f_roy_audit: {
-      text: "A formal audit feels heavy, so the checking never starts.",
-      cost: "Reconciliation is the lighter first step. It finds short payments without turning anything into a legal event.",
+      make: function () {
+        return {
+          text: "A formal audit feels heavy, so the checking never starts.",
+          cost: "Reconciliation is the lighter first step. It finds short payments without turning anything into a legal event.",
+        };
+      },
     },
-    f_ded_uncontested: {
-      text: "Deductions that go uncontested become permanent margin loss.",
-      cost: "The recovery window is finite, and it favors whoever documents first.",
-    },
-    f_ded_pace: {
-      text: "Fines and chargebacks are landing faster than your team can review them.",
-      cost: "That pace difference is where the margin goes.",
-    },
-    f_ded_writeoff: {
-      text: "Disputing a few and writing off the rest has quietly made the write-off your default.",
-      cost: "The retailers' systems are built to let that stand.",
+    f_ded_exposure: {
+      make: function (a) {
+        return {
+          text: "Industry data on CPG deductions says a large share of what retailers take is invalid, duplicate, or unauthorized, and most of it goes uncontested.",
+          cost: "On your number, " + (DED_MATH[a.exposure] || "a meaningful slice is typically contestable") + ". The window to contest is finite.",
+        };
+      },
     },
     f_ded_unknown: {
-      text: "Nobody has the true annual deduction total, which means the loss is running bigger than the estimate.",
-      cost: "Estimates only count the deductions someone happened to see.",
+      make: function () {
+        return {
+          text: "Nobody has the true annual deduction total, which means the loss is running bigger than the estimate.",
+          cost: "Estimates only count the deductions someone happened to see.",
+        };
+      },
+    },
+    f_ded_postaudit: {
+      make: function () {
+        return {
+          text: "Post-audit claims land months after the sale, when the paperwork trail has gone cold.",
+          cost: "Cold trails are exactly what the retailers' systems count on.",
+        };
+      },
+    },
+    f_ded_pace: {
+      make: function () {
+        return {
+          text: "Fines and chargebacks are landing faster than your team can review them.",
+          cost: "That pace difference is where the margin goes.",
+        };
+      },
+    },
+    f_ded_writeoff: {
+      make: function () {
+        return {
+          text: "Disputing a few and writing off the rest has quietly made the write-off your default.",
+          cost: "The retailers' systems are built to let that stand.",
+        };
+      },
+    },
+    f_ded_uncontested: {
+      make: function () {
+        return {
+          text: "Deductions that go uncontested become permanent margin loss.",
+          cost: "The recovery window is finite, and it favors whoever documents first.",
+        };
+      },
     },
     f_gen_leak: {
-      text: "Money is leaking somewhere and nobody has put a number on it yet.",
-      cost: "Unquantified leaks read as small by default. They rarely are once someone reconciles.",
+      make: function () {
+        return {
+          text: "Money is leaking somewhere and nobody has put a number on it yet.",
+          cost: "Unquantified leaks read as small by default. They rarely are once someone reconciles.",
+        };
+      },
     },
     f_scale: {
-      text: "At this agreement count, manual tracking is past the point where diligence can save it.",
-      cost: "The failure is structural. More effort from the same people does not fix structure.",
+      make: function () {
+        return {
+          text: "At this agreement count, manual tracking is past the point where diligence can save it.",
+          cost: "The failure is structural. More effort from the same people does not fix structure.",
+        };
+      },
     },
     f_small: {
-      text: "The portfolio is small enough that tracking it became somebody's second job.",
-      cost: "Second jobs lose to first jobs every week, and the misses land the same as they do at scale.",
+      make: function () {
+        return {
+          text: "The portfolio is small enough that tracking it became somebody's second job.",
+          cost: "Second jobs lose to first jobs every week, and the misses land the same as they do at scale.",
+        };
+      },
     },
     f_default: {
-      text: "The operation runs on effort and memory.",
-      cost: "That holds right up until it does not, and the first miss is rarely a small one.",
+      make: function () {
+        return {
+          text: "The operation runs on effort and memory.",
+          cost: "That holds right up until it does not, and the first miss is rarely a small one.",
+        };
+      },
     },
   };
 
-  function candidates(lane) {
-    var never = function (a) { return a.recency === "never" || a.recency === "unsure"; };
-    var has = function (k) { return function (a) { return a.symptoms.indexOf(k) !== -1; }; };
-    var big = function (a) { return a.scale === "s500" || a.scale === "p500"; };
-    var small = function (a) { return a.scale === "u50"; };
-    var always = function () { return true; };
-    var map = {
+  function candidates(a) {
+    var never = a.recency === "never" || a.recency === "unsure";
+    var flowKnown = a.exposure === "m1" || a.exposure === "m5" || a.exposure === "m5p";
+    var has = function (k) { return a.symptoms.indexOf(k) !== -1; };
+    var big = a.scale === "s500" || a.scale === "p500";
+    var small = a.scale === "u25";
+    var sit = function (k) { return a.situation === k; };
+    var lists = {
       licensing: [
+        ["f_stopped", has("lic_stopped") || sit("sit_stopped")],
+        ["f_flow_gap", (has("lic_facevalue") || never) && flowKnown],
+        ["f_inherit", sit("sit_inherit")],
         ["f_reconcile_gap", never],
-        ["f_lic_mismatch", has("lic_mismatch")],
-        ["f_lic_late", has("lic_late")],
-        ["f_spreadsheet", has("lic_spreadsheet")],
-        ["f_capacity", has("lic_capacity")],
+        ["f_minimums", has("lic_minimums")],
+        ["f_facevalue", has("lic_facevalue")],
+        ["f_memory", has("lic_memory")],
+        ["f_spreadsheet", has("lic_spreadsheet") || sit("sit_surprise")],
         ["f_scale", big],
         ["f_small", small],
-        ["f_default", always],
+        ["f_default", true],
       ],
       contract: [
-        ["f_con_renewals", has("con_renewals")],
+        ["f_inherit", sit("sit_inherit")],
+        ["f_clm", sit("sit_clm")],
+        ["f_con_renewals", has("con_renewals") || sit("sit_slip")],
         ["f_con_visibility", has("con_visibility")],
+        ["f_memory", has("con_memory")],
         ["f_con_inbox", has("con_inbox")],
-        ["f_con_volume", has("con_volume")],
+        ["f_con_volume", has("con_volume") || sit("sit_pile")],
         ["f_scale", big],
         ["f_small", small],
-        ["f_default", always],
+        ["f_default", true],
       ],
       royalty: [
-        ["f_roy_facevalue", has("roy_facevalue")],
+        ["f_stopped", sit("sit_stopped")],
+        ["f_flow_gap", (has("roy_facevalue") || sit("sit_trust") || never) && flowKnown],
+        ["f_facevalue", has("roy_facevalue") || sit("sit_trust")],
         ["f_reconcile_gap", never],
-        ["f_roy_suspicion", has("roy_suspicion")],
-        ["f_roy_audit", has("roy_audit")],
-        ["f_lic_late", has("roy_late")],
+        ["f_roy_suspicion", has("roy_suspicion") || sit("sit_light")],
+        ["f_roy_audit", has("roy_audit") || sit("sit_audit")],
+        ["f_spreadsheet", has("roy_late")],
         ["f_scale", big],
-        ["f_default", always],
+        ["f_default", true],
       ],
       deduction: [
-        ["f_ded_unknown", has("ded_unknown")],
-        ["f_ded_pace", function (a) { return a.symptoms.indexOf("ded_pace") !== -1 || a.symptoms.indexOf("ded_fines") !== -1; }],
+        ["f_ded_exposure", a.exposure === "m500" || a.exposure === "m2" || a.exposure === "m2p"],
+        ["f_ded_unknown", has("ded_unknown") || a.exposure === "unknown" || sit("sit_sizing")],
+        ["f_ded_postaudit", has("ded_postaudit")],
+        ["f_ded_pace", has("ded_pace") || has("ded_fines") || sit("sit_otif")],
         ["f_ded_writeoff", has("ded_writeoff")],
-        ["f_ded_uncontested", always],
+        ["f_ded_uncontested", true],
         ["f_scale", big],
       ],
       notsure: [
+        ["f_inherit", sit("sit_inherit")],
         ["f_reconcile_gap", never],
         ["f_gen_leak", has("gen_leak")],
-        ["f_roy_facevalue", has("gen_facevalue")],
+        ["f_facevalue", has("gen_facevalue")],
         ["f_spreadsheet", has("gen_spreadsheet")],
-        ["f_small", function (a) { return a.symptoms.indexOf("gen_secondjob") !== -1 || a.scale === "u50"; }],
+        ["f_small", has("gen_secondjob") || small],
         ["f_scale", big],
-        ["f_default", always],
+        ["f_default", true],
       ],
     };
-    return map[lane] || map.notsure;
+    return lists[a.service] || lists.notsure;
   }
 
   function pickFindings(a) {
     var shown = [];
     var held = [];
     var groups = {};
-    var list = candidates(a.service);
+    var list = candidates(a);
     for (var i = 0; i < list.length; i++) {
       var key = list[i][0];
-      if (!list[i][1](a)) continue;
+      if (!list[i][1]) continue;
       if (shown.indexOf(key) !== -1 || held.indexOf(key) !== -1) continue;
       var g = FINDINGS[key].group;
       if (shown.length < 2) {
@@ -216,12 +427,31 @@
     return { shown: shown, held: held };
   }
 
+  function findingText(key, a) {
+    var f = FINDINGS[key];
+    if (!f) return null;
+    var r = f.make(a || {});
+    return r.text + " " + r.cost;
+  }
+
   /* --------------------------- Small helpers ----------------------------- */
 
   function track(name, lane) {
     try {
       window.dataLayer = window.dataLayer || [];
       window.dataLayer.push({ event: name, diagnosticLane: lane });
+    } catch (e) {}
+  }
+
+  function fireLeadConversion() {
+    try {
+      if (typeof window.gtag === "function") {
+        window.gtag("event", "conversion", {
+          send_to: "AW-18059564741/WvQcCMGbr8AcEMWtvKND",
+          value: 1.0,
+          currency: "USD",
+        });
+      }
     } catch (e) {}
   }
 
@@ -267,9 +497,10 @@
     if (!log || !controls) return;
 
     var state = {
-      service: "", scale: "", symptoms: [], recency: "", timeline: "",
+      service: "", situation: "", scale: "", symptoms: [], recency: "",
+      timeline: "", exposure: "",
       name: "", first: "", email: "", phone: "", company: "",
-      picks: null, started: false,
+      picks: null, started: false, crmOk: false,
     };
 
     function scrollDown() {
@@ -290,7 +521,6 @@
 
     function addUser(text) { bubble("chat-msg--user", text); }
 
-    /* Typing indicator, then the bot line, then cb. */
     function addBot(text, cb, extraDelay) {
       var t = document.createElement("div");
       t.className = "chat-msg chat-msg--bot chat-typing";
@@ -309,7 +539,6 @@
       }, delay);
     }
 
-    /* Seed an instant bot line (no typing), for pre-answered entries. */
     function seedBot(text) { bubble("chat-msg--bot", text); }
 
     function clearControls() { controls.innerHTML = ""; }
@@ -371,70 +600,82 @@
       scrollDown();
     }
 
-    function begin() {
-      if (!state.started) { state.started = true; track("diagnostic_start", state.service || "unset"); }
+    function begin(lane) {
+      if (!state.started) { state.started = true; track("diagnostic_start", lane || "unset"); }
     }
 
     /* ------------------------------ Steps -------------------------------- */
 
     var Q1 = "What got you looking today?";
 
-    function laneChips() {
-      return Object.keys(LANES).map(function (key) {
-        return [LANES[key], function () {
-          begin();
-          state.service = key;
-          addUser(LANES[key]);
-          clearControls();
-          askScale();
-        }, key === "notsure"];
+    function situationChips(keys) {
+      return keys.map(function (key) {
+        var s = SITS[key];
+        return [s[0], function () {
+          pickSituation(key);
+        }, key === "sit_ahead"];
       });
+    }
+
+    function pickSituation(key) {
+      var s = SITS[key];
+      begin(s[1] || state.service);
+      state.situation = key;
+      if (!state.service) state.service = s[1] || "notsure";
+      addUser(s[0]);
+      clearControls();
+      addBot(s[2], askScale);
     }
 
     function open() {
       var lane = param("s");
-      if (!LANES[lane] || lane === "notsure") lane = "";
-      var jumped = param("go") === "1";
+      if (!LANE_SITS[lane]) lane = "";
+      var seedSit = param("t");
+      if (!SITS[seedSit]) seedSit = "";
+      state.service = lane || "";
 
-      if (lane && jumped) {
+      if (seedSit && param("go") === "1") {
         seedBot(Q1);
-        state.service = lane;
+        var s = SITS[seedSit];
+        state.situation = seedSit;
+        if (!state.service) state.service = s[1] || "notsure";
         state.started = true;
-        track("diagnostic_start", lane);
-        addUser(LANES[lane]);
-        askScale();
-      } else if (lane) {
-        addBot("Hey, glad you stopped in. This takes about a minute and ends with a straight read on your setup.", function () {
-          addBot("You were just reading about " + LANES[lane].toLowerCase() + ". Is that where it hurts?", function () {
-            setChips([
-              ["That's the one", function () {
-                begin();
-                state.service = lane;
-                addUser("That's the one");
-                clearControls();
-                askScale();
-              }],
-              ["It's something else", function () {
+        track("diagnostic_start", state.service);
+        addUser(s[0]);
+        addBot(s[2], askScale);
+      } else {
+        var keys = lane ? LANE_SITS[lane] : LANE_SITS.cross;
+        addBot("Hey, glad you're here. Quick read on your setup: a few questions, about a minute, and I'll show you what stands out before anyone calls you.", function () {
+          addBot("First one's easy. " + Q1, function () {
+            var items = situationChips(keys);
+            if (lane) {
+              items.push(["It's something else", function () {
                 addUser("It's something else");
                 clearControls();
-                addBot(Q1, function () { setChips(laneChips()); });
-              }, true],
-            ]);
+                state.service = "";
+                addBot("No problem. Which of these is closest?", function () {
+                  setChips(situationChips(LANE_SITS.cross));
+                });
+              }, true]);
+            }
+            setChips(items);
           });
-        });
-      } else {
-        addBot("Hey, glad you stopped in. This takes about a minute and ends with a straight read on your setup.", function () {
-          addBot("First one's easy. " + Q1, function () { setChips(laneChips()); });
         });
       }
     }
 
     function askScale() {
-      addBot("Roughly how many contracts or agreements are in play right now?", function () {
+      var q = {
+        licensing: "How many licensing agreements are live right now, roughly?",
+        royalty: "How many royalty-bearing agreements are we talking about, roughly?",
+        deduction: "How many retail accounts are taking deductions, roughly?",
+      }[state.service] || "How many contracts or agreements are in play, roughly?";
+      addBot(q, function () {
         setChips([
-          ["Under 50", pickScale("u50")],
-          ["50 to 200", pickScale("s200")],
-          ["201 to 500", pickScale("s500")],
+          ["A couple dozen or fewer", pickScale("u25")],
+          ["25 to 100", pickScale("s100")],
+          ["100 to 250", pickScale("s250")],
+          ["250 to 500", pickScale("s500")],
           ["More than 500", pickScale("p500")],
           ["Honestly not sure", pickScale("unsure"), true],
         ]);
@@ -442,15 +683,15 @@
     }
 
     function pickScale(val) {
-      var labels = { u50: "Under 50", s200: "50 to 200", s500: "201 to 500", p500: "More than 500", unsure: "Honestly not sure" };
+      var labels = { u25: "A couple dozen or fewer", s100: "25 to 100", s250: "100 to 250", s500: "250 to 500", p500: "More than 500", unsure: "Honestly not sure" };
       return function () {
         state.scale = val;
         addUser(labels[val]);
         clearControls();
         var ack = "";
-        if (val === "p500" || val === "s500") ack = "That's past what one person tracks by hand.";
-        else if (val === "u50") ack = "Small enough to feel manageable. That is usually the trap.";
-        else if (val === "unsure") ack = "Fair. That answer says a lot on its own.";
+        if (val === "p500" || val === "s500") ack = "That's well past what one person tracks by hand.";
+        else if (val === "u25") ack = "Small enough to feel manageable. That is usually the trap.";
+        else if (val === "unsure") ack = "Fair. Not knowing the count is a data point on its own.";
         if (ack) addBot(ack, askSymptoms);
         else askSymptoms();
       };
@@ -483,7 +724,7 @@
           clearControls();
           var ack = "";
           if (!chosen.length) ack = "Either it's airtight or nobody has looked. Both are worth knowing for sure.";
-          else if (chosen.length >= 2) ack = "That combination shows up together for a reason.";
+          else if (chosen.length >= 2) ack = "Those show up together for a reason. Noted.";
           if (ack) addBot(ack, askRecency);
           else askRecency();
         }));
@@ -496,7 +737,7 @@
     function askRecency() {
       var q = state.service === "deduction"
         ? "When did anyone last go through the deductions line by line?"
-        : "When did anyone last reconcile the numbers against the agreements themselves?";
+        : "When did anyone last reconcile what gets reported against the agreements themselves?";
       addBot(q, function () {
         setChips([
           ["Within the last year", pickRecency("year")],
@@ -517,13 +758,32 @@
         if (val === "never") ack = "That's usually where it hides.";
         else if (val === "unsure") ack = "Unknown usually means never. Worth knowing for sure.";
         else if (val === "three") ack = "A lot can drift in that window.";
-        if (ack) addBot(ack, askTimeline);
-        else askTimeline();
+        if (ack) addBot(ack, askExposure);
+        else askExposure();
       };
     }
 
+    function askExposure() {
+      var isDed = state.service === "deduction";
+      var q = isDed
+        ? "Rough number so the math means something: what did retailers take off your invoices last year, deductions and fines together?"
+        : "Rough number so the math means something: what flows through these agreements a year?";
+      var set = isDed ? EXPOSURE.ded : EXPOSURE.flow;
+      addBot(q, function () {
+        setChips(set.map(function (o) {
+          return [o[1], function () {
+            state.exposure = o[0];
+            addUser(o[1]);
+            clearControls();
+            if (o[0] === "unknown") addBot("That answer is a finding in itself. Hold that thought.", askTimeline);
+            else askTimeline();
+          }, !!o[2]];
+        }));
+      });
+    }
+
     function askTimeline() {
-      addBot("Last quick one before I run this. How soon do you want eyes on it?", function () {
+      addBot("Last one. How soon do you want eyes on this?", function () {
         setChips([
           ["This month", pickTimeline("month")],
           ["This quarter", pickTimeline("quarter")],
@@ -544,40 +804,40 @@
     }
 
     function askName() {
-      addBot("Alright, I can run your read now. Who do I make it out to?", function () {
+      addBot("I have enough to run your read. Who do I make it out to?", function () {
         setTextInput({
           label: "Full name", placeholder: "Full name", auto: "name",
-          validate: function (v) { return v ? "" : "I need a name to put on the assessment."; },
+          validate: function (v) { return v ? "" : "I need a name to put on the read."; },
           onSubmit: function (v) {
             state.name = v;
             state.first = v.split(" ")[0];
             addUser(v);
-            askEmail();
+            askPhone();
           },
-        });
-      });
-    }
-
-    function askEmail() {
-      addBot("Thanks, " + state.first + ". Work email for the summary?", function () {
-        setTextInput({
-          label: "Work email", type: "email", placeholder: "name@company.com", auto: "email",
-          validate: function (v) {
-            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? "" : "That email looks short a piece. One more time?";
-          },
-          onSubmit: function (v) { state.email = v; addUser(v); askPhone(); },
         });
       });
     }
 
     function askPhone() {
-      addBot("And the best direct number? A specialist calls within one business hour. No sequence, no spam.", function () {
+      addBot("Thanks, " + state.first + ". Best direct number? A specialist calls within one business hour. No sequence, no spam.", function () {
         setTextInput({
           label: "Direct phone", type: "tel", placeholder: "(555) 555-0100", auto: "tel",
           validate: function (v) {
             return v.replace(/\D/g, "").length >= 10 ? "" : "I need a number with area code so the call actually lands.";
           },
-          onSubmit: function (v) { state.phone = v; addUser(v); askCompany(); },
+          onSubmit: function (v) { state.phone = v; addUser(v); askEmail(); },
+        });
+      });
+    }
+
+    function askEmail() {
+      addBot("And a work email, in case the line's busy?", function () {
+        setTextInput({
+          label: "Work email", type: "email", placeholder: "name@company.com", auto: "email",
+          validate: function (v) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? "" : "That email looks short a piece. One more time?";
+          },
+          onSubmit: function (v) { state.email = v; addUser(v); askCompany(); },
         });
       });
     }
@@ -592,12 +852,40 @@
       });
     }
 
+    /* The processing moment: one status bubble cycling through real stages. */
+    function runTheater(cb) {
+      var stages = ["Reading your answers...", "Matching the pattern against portfolios like yours...", "Sizing the exposure..."];
+      var b = document.createElement("div");
+      b.className = "chat-msg chat-msg--bot chat-msg--status";
+      var dots = document.createElement("span");
+      dots.className = "chat-typing chat-typing--inline";
+      dots.innerHTML = "<i></i><i></i><i></i>";
+      var label = document.createElement("span");
+      b.appendChild(dots);
+      b.appendChild(label);
+      log.appendChild(b);
+      scrollDown();
+      var i = 0;
+      function step() {
+        if (i < stages.length) {
+          label.textContent = " " + stages[i];
+          i += 1;
+          window.setTimeout(step, reduce ? 80 : 1000);
+        } else {
+          b.remove();
+          cb();
+        }
+      }
+      step();
+    }
+
     function submitLead() {
       clearControls();
       state.picks = pickFindings(state);
       var payload = {
-        service: state.service, scale: state.scale, symptoms: state.symptoms,
-        recency: state.recency, timeline: state.timeline,
+        service: state.service, situation: state.situation, scale: state.scale,
+        symptoms: state.symptoms, recency: state.recency, timeline: state.timeline,
+        exposure: state.exposure,
         shown: state.picks.shown, held: state.picks.held,
         name: state.name, email: state.email, phone: state.phone, company: state.company,
         website: "",
@@ -606,33 +894,34 @@
         firstTouch: firstTouch(),
         gclid: currentGclid(),
       };
-      addBot("Give me a second. Running your answers now...", function () {
-        fetch("/api/lead", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        })
-          .then(function (r) { return r.json(); })
-          .then(function (r) {
-            if (!r || !r.ok) throw new Error("api");
-            try {
-              window.sessionStorage.setItem("vxDiag", JSON.stringify({ n: state.first, shown: state.picks.shown }));
-            } catch (e) {}
+      fetch("/api/lead", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (r) { state.crmOk = !!(r && r.ok); })
+        .catch(function () { state.crmOk = false; })
+        .then(function () {
+          if (state.crmOk) {
+            fireLeadConversion();
             track("diagnostic_submit", state.service);
-            reveal();
-          })
-          .catch(fail);
-      }, reduce ? 0 : 900);
+          }
+          try {
+            window.sessionStorage.setItem("vxDiag", JSON.stringify({ n: state.first, shown: state.picks.shown, a: state }));
+          } catch (e) {}
+        });
+      runTheater(reveal);
     }
 
     function reveal() {
       var shown = state.picks.shown;
-      var lead = shown.length > 1 ? ", two things stand out:" : ", one thing stands out:";
+      var lead = shown.length > 1 ? ", here's the preview of your read. Two things stand out:" : ", here's the preview of your read. One thing stands out:";
       addBot(state.first + lead, function () {
         var i = 0;
         function nextFinding() {
           if (i < shown.length) {
-            var f = FINDINGS[shown[i]];
+            var text = findingText(shown[i], state);
             i += 1;
             var b = document.createElement("div");
             b.className = "chat-msg chat-msg--bot chat-msg--finding";
@@ -640,30 +929,48 @@
             n.className = "chat-finding__n";
             n.textContent = "0" + i;
             b.appendChild(n);
-            b.appendChild(document.createTextNode(f.text + " " + f.cost));
+            b.appendChild(document.createTextNode(text));
             log.appendChild(b);
             scrollDown();
-            window.setTimeout(nextFinding, reduce ? 40 : 700);
+            window.setTimeout(nextFinding, reduce ? 40 : 800);
           } else {
-            addBot("There's more in here, and the useful half needs your agreements open next to a specialist. We call you within one business hour, or grab a time now and skip the phone tag.", function () {
-              setChips([
-                ["Book a time now", function () { window.location.href = "/thank-you"; }],
-                ["The call works for me", function () { window.location.href = "/thank-you"; }, true],
-              ]);
-            });
+            closeOut();
           }
         }
         nextFinding();
       });
     }
 
-    function fail() {
-      addBot("Something on my end did not send. Call (860) 236-8002 or use the contact page and we will take it from there.", function () {
-        setChips([
-          ["Call (860) 236-8002", function () { window.location.href = "tel:+18602368002"; }],
-          ["Open the contact page", function () { window.location.href = "contact.html"; }, true],
-          ["Try again", function () { submitLead(); }, true],
-        ]);
+    function proofLine() {
+      if (state.service === "deduction") {
+        return "For context: recovery is the original work here. Accu-Track started in 1990 getting back money retailers were quietly holding off CPG invoices.";
+      }
+      return "For context: our reconciliation work surfaced $27.6M for one client in four months, on an inherited licensing portfolio.";
+    }
+
+    function closeOut() {
+      addBot(proofLine(), function () {
+        var line = state.crmOk
+          ? "The full read needs your agreements open next to a specialist, and that's a 30-minute call, no pitch. A specialist calls you within one business hour. If you'd rather pick the moment, grab a time here:"
+          : "The full read needs your agreements open next to a specialist, and that's a 30-minute call, no pitch. Grab a time below and it's locked. Or call us direct at (860) 236-8002.";
+        addBot(line, function () {
+          var w = document.createElement("div");
+          w.className = "chat-msg chat-msg--bot chat-msg--widget";
+          w.innerHTML = '<iframe src="https://api.leadconnectorhq.com/widget/booking/zqY1dBbeXQwIKC3tmeS9" style="width:100%; min-height:760px; border:none; overflow:hidden; display:block; border-radius:8px;" scrolling="no" id="vx-booking-widget" title="Book your free assessment"></iframe>';
+          log.appendChild(w);
+          scrollDown();
+          var items = state.crmOk
+            ? [["I'll take the call", function () {
+                clearControls();
+                addBot("Done. Keep the phone close, " + state.first + ". Talk soon.");
+              }, true]]
+            : [["Call (860) 236-8002", function () { window.location.href = "tel:+18602368002"; }],
+               ["I booked a time", function () {
+                clearControls();
+                addBot("Locked in. Talk soon, " + state.first + ".");
+              }, true]];
+          setChips(items);
+        });
       });
     }
 
@@ -694,18 +1001,18 @@
     box.appendChild(lead);
 
     for (var i = 0; i < Math.min(data.shown.length, 2); i++) {
-      var f = FINDINGS[data.shown[i]];
-      if (!f) continue;
+      var text = findingText(data.shown[i], data.a || {});
+      if (!text) continue;
       var item = el("div", "vx-finding");
       var n = el("span", "vx-finding__n", "0" + (i + 1));
       var p = el("p");
       p.appendChild(n);
-      p.appendChild(document.createTextNode(f.text + " " + f.cost));
+      p.appendChild(document.createTextNode(text));
       item.appendChild(p);
       box.appendChild(item);
     }
 
-    box.appendChild(el("p", "vx-reveal__more", "The full read goes deeper than these two. Your specialist walks through the rest on the call, with your agreements in front of them."));
+    box.appendChild(el("p", "vx-reveal__more", "The full read goes deeper than these. Your specialist walks through the rest on the call, with your agreements in front of them."));
     mount.appendChild(box);
     mount.hidden = false;
   }

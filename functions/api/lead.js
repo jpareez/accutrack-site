@@ -9,51 +9,79 @@ const GHL_VERSION = "2021-07-28";
 
 const ENUMS = {
   service: ["licensing", "contract", "royalty", "deduction", "notsure"],
-  scale: ["u50", "s200", "s500", "p500", "unsure"],
+  scale: ["u25", "s100", "s250", "s500", "p500", "unsure"],
   recency: ["year", "three", "never", "unsure"],
   timeline: ["month", "quarter", "gathering"],
+  exposure: ["", "u250", "m1", "m5", "m5p", "skip", "u100", "m500", "m2", "m2p", "unknown"],
+};
+
+const SITUATION_LABELS = {
+  sit_light: "Royalty checks look lighter than they should",
+  sit_late: "Statements show up late or not at all",
+  sit_surprise: "A renewal or deadline caught us off guard",
+  sit_inherit: "Acquiring; agreements piling up (inherited portfolio)",
+  sit_pile: "Contracts piling up faster than they can track",
+  sit_slip: "Renewals keep slipping past",
+  sit_clm: "Priced CLM software and balked",
+  sit_trust: "Takes licensees' math on trust",
+  sit_stopped: "A licensee went quiet on reporting",
+  sit_audit: "Weighing a formal royalty audit",
+  sit_deduct: "Retailers taking money off invoices",
+  sit_otif: "OTIF fines and chargebacks stacking up",
+  sit_sizing: "Trying to size annual deduction loss",
+  sit_compliance: "Licensing compliance needs to get under control",
+  sit_ahead: "Just getting ahead of it / browsing",
 };
 
 const SYMPTOM_LABELS = {
-  lic_late: "Royalty reports show up late or not at all",
-  lic_mismatch: "The numbers never quite match the agreement",
+  lic_facevalue: "Takes licensees' numbers at face value",
+  lic_minimums: "Minimum guarantees nobody is checking",
   lic_spreadsheet: "Renewals and deadlines live in a spreadsheet",
-  lic_capacity: "Nobody has time to check any of it",
+  lic_memory: "Compliance lives in one person's memory",
+  lic_stopped: "At least one licensee has gone quiet",
   con_renewals: "Renewal dates slip past before anyone notices",
   con_inbox: "Obligations live in inboxes and memory",
   con_visibility: "Nobody can say what is due this month",
-  con_volume: "The volume outgrew the person watching it",
-  roy_late: "Reports arrive late or incomplete",
-  roy_facevalue: "We take the licensee's math at face value",
+  con_memory: "Tracking lives in one person's head",
+  con_volume: "Volume outgrew the person watching it",
+  roy_late: "Statements arrive late or incomplete",
+  roy_facevalue: "Takes the licensee's math at face value",
   roy_suspicion: "Short payments are a suspicion, not a number",
   roy_audit: "A formal audit feels too heavy to start",
-  ded_pace: "Deductions hit faster than we can review them",
-  ded_fines: "Shortage fines and chargebacks pile up",
-  ded_writeoff: "We dispute a few and write off the rest",
+  ded_pace: "Deductions hit faster than they can review",
+  ded_fines: "OTIF fines and vendor chargebacks pile up",
+  ded_postaudit: "Post-audit claims land months after the sale",
+  ded_writeoff: "Disputes a few, writes off the rest",
   ded_unknown: "Nobody knows the true annual total",
   gen_spreadsheet: "Tracking lives in spreadsheets and memory",
-  gen_leak: "Money is leaking somewhere nobody has quantified",
-  gen_facevalue: "We take reported numbers at face value",
+  gen_leak: "Money leaking, nobody has quantified it",
+  gen_facevalue: "Takes reported numbers at face value",
   gen_secondjob: "It has become somebody's second job",
 };
 
 const FINDING_LABELS = {
+  f_flow_gap: "Reconciliation gap sized against their flow (15-25% study)",
   f_reconcile_gap: "Reconciliation gap (15-25% study)",
-  f_lic_late: "Reports late/missing = unowned process",
-  f_lic_spreadsheet: "Deadline tracking rides on memory",
-  f_lic_capacity: "Portfolio outgrew available hours",
-  f_lic_mismatch: "Structural reporting mismatch",
+  f_facevalue: "Licensee math taken at face value (study)",
+  f_stopped: "Licensee gone quiet = loudest signal",
+  f_minimums: "Unchecked minimum guarantees",
+  f_memory: "Single-person-memory structural risk",
+  f_inherit: "Inherited portfolio, no central record ($27.6M pattern)",
+  f_clm: "CLM software still needs people",
+  f_spreadsheet: "Deadline tracking rides on memory",
   f_con_renewals: "Renewal slippage",
   f_con_inbox: "Obligations in inboxes and memory",
   f_con_visibility: "No monthly obligations visibility",
   f_con_volume: "Volume past manual tracking",
-  f_roy_facevalue: "Licensee math taken at face value",
   f_roy_suspicion: "Unquantified shortfall",
   f_roy_audit: "Audit-aversion stalls recovery",
-  f_ded_uncontested: "Uncontested deductions = permanent loss",
+  f_ded_exposure: "Deduction exposure sized against their number",
+  f_ded_unknown: "True annual deduction total unknown",
+  f_ded_postaudit: "Post-audit claims on a cold trail",
   f_ded_pace: "Deduction pace beats review capacity",
   f_ded_writeoff: "Write-off has become the default",
-  f_ded_unknown: "True annual deduction total unknown",
+  f_ded_uncontested: "Uncontested deductions = permanent loss",
+  f_gen_leak: "Unquantified leak",
   f_scale: "Scale past the point manual diligence holds",
   f_small: "Second-job tracking on a smaller portfolio",
   f_default: "Run on effort and memory",
@@ -64,13 +92,14 @@ const LANE_LABELS = {
   contract: "Contract management",
   royalty: "Royalty reporting",
   deduction: "Deduction recovery",
-  notsure: "Not sure yet",
+  notsure: "General / not sure",
 };
 
 const SCALE_LABELS = {
-  u50: "Under 50",
-  s200: "50 to 200",
-  s500: "201 to 500",
+  u25: "A couple dozen or fewer",
+  s100: "25 to 100",
+  s250: "100 to 250",
+  s500: "250 to 500",
   p500: "More than 500",
   unsure: "Not sure",
 };
@@ -88,6 +117,19 @@ const TIMELINE_LABELS = {
   gathering: "Just gathering information",
 };
 
+const EXPOSURE_LABELS = {
+  u250: "Under $250K/yr through the agreements",
+  m1: "$250K to $1M/yr through the agreements",
+  m5: "$1M to $5M/yr through the agreements",
+  m5p: "More than $5M/yr through the agreements",
+  skip: "Declined to say",
+  u100: "Under $100K/yr in deductions",
+  m500: "$100K to $500K/yr in deductions",
+  m2: "$500K to $2M/yr in deductions",
+  m2p: "More than $2M/yr in deductions",
+  unknown: "Nobody knows the annual deduction total",
+};
+
 function sanitize(v, max) {
   if (typeof v !== "string") return "";
   return v
@@ -100,10 +142,11 @@ function sanitize(v, max) {
 
 function scoreLead(a) {
   let s = 2;
-  s += { u50: 0, s200: 1, s500: 2, p500: 3, unsure: 1 }[a.scale] || 0;
+  s += { u25: 0, s100: 1, s250: 2, s500: 2, p500: 3, unsure: 1 }[a.scale] || 0;
   s += Math.min(a.symptoms.length, 2);
   s += { year: 0, three: 1, never: 2, unsure: 1 }[a.recency] || 0;
   s += { month: 2, quarter: 1, gathering: 0 }[a.timeline] || 0;
+  s += { m5: 1, m5p: 1, m2: 1, m2p: 1, unknown: 1 }[a.exposure] || 0;
   return Math.max(1, Math.min(10, s));
 }
 
@@ -161,9 +204,11 @@ async function handlePost(context) {
 
   const answers = {
     service: ENUMS.service.includes(data.service) ? data.service : "notsure",
+    situation: SITUATION_LABELS[data.situation] ? data.situation : "",
     scale: ENUMS.scale.includes(data.scale) ? data.scale : "unsure",
     recency: ENUMS.recency.includes(data.recency) ? data.recency : "unsure",
     timeline: ENUMS.timeline.includes(data.timeline) ? data.timeline : "gathering",
+    exposure: ENUMS.exposure.includes(data.exposure) ? data.exposure : "",
     symptoms: Array.isArray(data.symptoms)
       ? data.symptoms.filter((k) => SYMPTOM_LABELS[k]).slice(0, 6)
       : [],
@@ -207,18 +252,22 @@ async function handlePost(context) {
   }
 
   const lines = [
-    "DIAGNOSTIC INTAKE (website step funnel)",
+    "DIAGNOSTIC INTAKE (website conversation)",
     "Priority score: " + score + "/10",
     "Lane: " + LANE_LABELS[answers.service],
+    answers.situation ? "Trigger: " + SITUATION_LABELS[answers.situation] : "",
     "Agreements in play: " + SCALE_LABELS[answers.scale],
     "Symptoms: " +
       (answers.symptoms.length
         ? answers.symptoms.map((k) => SYMPTOM_LABELS[k]).join(" | ")
         : "none selected"),
     "Last reconciled: " + RECENCY_LABELS[answers.recency],
+    answers.exposure && answers.exposure !== "skip"
+      ? "Exposure: " + EXPOSURE_LABELS[answers.exposure]
+      : "Exposure: not shared",
     "Timeline: " + TIMELINE_LABELS[answers.timeline],
     "",
-    "Shown on thank-you page: " +
+    "Shown in the chat preview: " +
       (shown.length ? shown.map((k) => FINDING_LABELS[k]).join(" | ") : "none"),
     "Held for the call: " +
       (held.length ? held.map((k) => FINDING_LABELS[k]).join(" | ") : "none"),

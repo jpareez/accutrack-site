@@ -1105,4 +1105,7 @@ html.js .hero .reveal{opacity:1;transform:none;}
 .vx-finding { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
 .vx-finding p { margin: 0; }
 .vx-finding__n { font-family: var(--mono); color: var(--accent-deep); margin-right: 8px; font-size: .9rem; }
-.vx-reveal__more { margin: 14px 0 0; color: var(--ink-muted); font-size: .92rem; }
+.vx-reveal__more { margin: 14px 0 0; color: var(--ink-muted); font-size: .92rem; }.chat-msg--status { display: flex; align-items: center; gap: 4px; color: var(--ink-muted); font-style: normal; }
+.chat-typing--inline i { width: 5px; height: 5px; }
+.chat-msg--widget { max-width: 100%; width: 100%; padding: 8px; }
+.chat-msg--widget iframe { background: var(--canvas); }
