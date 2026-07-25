@@ -1004,3 +1004,64 @@ h3.faq__q{margin:0;}
 
 /* render fix: hero paints immediately even with JS on */
 html.js .hero .reveal{opacity:1;transform:none;}
+
+/* ---------------------- Diagnostic step funnel ------------------------- */
+.vx-diag {
+  background: var(--canvas); border: 1px solid var(--line); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card); padding: clamp(22px, 3vw, 32px);
+}
+.vx-diag__meta {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-family: var(--mono); font-size: 12px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--ink-faint); margin-bottom: 10px;
+}
+.vx-diag__bar { height: 3px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.vx-diag__bar i { display: block; height: 100%; background: var(--teal); transition: width .25s ease; }
+@media (prefers-reduced-motion: reduce) { .vx-diag__bar i { transition: none; } }
+.vx-diag__q { margin: 18px 0 4px; font-size: clamp(1.05rem, 1.6vw, 1.25rem); line-height: 1.35; outline: none; }
+.vx-diag__sub { margin: 0 0 6px; color: var(--ink-muted); font-size: .92rem; }
+.vx-opt {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  width: 100%; text-align: left; padding: 12px 14px; margin-top: 8px;
+  background: var(--canvas); border: 1px solid var(--line-strong); border-radius: var(--radius);
+  font-family: var(--sans); font-size: .95rem; color: var(--ink); cursor: pointer;
+  transition: border-color .15s ease, background-color .15s ease;
+}
+.vx-opt:hover { border-color: var(--teal); background: var(--teal-wash); }
+.vx-opt[aria-pressed="true"] { border-color: var(--teal); background: var(--teal-wash); box-shadow: inset 0 0 0 1px var(--teal); }
+.vx-opt__tag {
+  flex: none; font-family: var(--mono); font-size: 10px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--teal-dark); background: var(--teal-wash-2);
+  padding: 3px 7px; border-radius: 3px;
+}
+.vx-diag__nav { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; }
+.vx-back {
+  font-family: var(--mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--ink-muted); background: none; border: 0; padding: 6px 0; cursor: pointer;
+}
+.vx-back:hover { color: var(--teal-dark); }
+.vx-field { margin-top: 12px; }
+.vx-field label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: 5px; }
+.vx-field input {
+  width: 100%; padding: 11px 12px; border: 1px solid var(--line-strong); border-radius: var(--radius);
+  font-family: var(--sans); font-size: 1rem; color: var(--ink); background: var(--canvas);
+}
+.vx-field input:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal-wash-2); }
+.vx-form .btn { margin-top: 16px; }
+.vx-hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+.vx-err { color: #A23B2E; font-size: .88rem; margin: 10px 0 0; min-height: 1.2em; }
+.vx-note { margin: 10px 0 0; font-size: .85rem; color: var(--ink-muted); }
+.vx-reveal {
+  max-width: 660px; margin: 26px auto 0; text-align: left;
+  background: var(--canvas); border: 1px solid var(--line); border-left: 3px solid var(--accent);
+  border-radius: var(--radius-lg); padding: clamp(18px, 3vw, 26px); box-shadow: var(--shadow-card);
+}
+.vx-reveal__eyebrow {
+  font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--accent-deep); margin: 0 0 8px;
+}
+.vx-reveal__lead { margin: 0; font-weight: 600; }
+.vx-finding { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.vx-finding p { margin: 0; }
+.vx-finding__n { font-family: var(--mono); color: var(--accent-deep); margin-right: 8px; font-size: .9rem; }
+.vx-reveal__more { margin: 14px 0 0; color: var(--ink-muted); font-size: .92rem; }
