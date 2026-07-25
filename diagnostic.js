@@ -938,31 +938,51 @@
       var overlay = el("div", "vx-results");
       overlay.id = "vx-results";
       var stage = el("div", "vx-analyzing");
-      var rings = el("div", "vx-rings");
-      rings.innerHTML = "<i></i><i></i><i></i>";
-      var status = el("p", "vx-analyzing__status", "Reading your answers");
+      var log2 = el("div", "vx-ledger");
       var bar = el("div", "vx-analyzing__bar");
       var fill = el("i");
       bar.appendChild(fill);
-      stage.appendChild(rings);
-      stage.appendChild(status);
+      stage.appendChild(log2);
       stage.appendChild(bar);
       overlay.appendChild(stage);
       document.body.appendChild(overlay);
       document.body.classList.add("vx-locked");
 
-      var stages = ["Reading your answers", "Matching the pattern against portfolios your size", "Sizing the exposure"];
-      var stepMs = reduce ? 120 : 1150;
+      var scaleLabels = { u25: "a couple dozen or fewer", s100: "25 to 100", s250: "100 to 250", s500: "250 to 500", p500: "more than 500", unsure: "count unconfirmed" };
+      var recLabels = { year: "within the last year", three: "one to three years ago", never: "never", unsure: "unknown" };
+      var expLabels = { u250: "under $250K", m1: "$250K to $1M", m5: "$1M to $5M", m5p: "more than $5M", u100: "under $100K", m500: "$100K to $500K", m2: "$500K to $2M", m2p: "more than $2M", unknown: "total unknown" };
+      var tlLabels = { month: "this month", quarter: "this quarter", gathering: "gathering information" };
+
+      var lines = [
+        ["PORTFOLIO", scaleLabels[state.scale] || "on record"],
+        ["FLAGS", state.symptoms.length ? state.symptoms.length + " selected" : "none selected"],
+        ["LAST RECONCILED", recLabels[state.recency] || "unknown"],
+      ];
+      if (state.exposure && state.exposure !== "skip" && expLabels[state.exposure]) {
+        lines.push([state.service === "deduction" ? "ANNUAL DEDUCTIONS" : "ANNUAL FLOW", expLabels[state.exposure]]);
+      }
+      lines.push(["TIMELINE", tlLabels[state.timeline] || ""]);
+      var phases = ["MATCHING PORTFOLIO PATTERNS", "SIZING THE EXPOSURE", "PREVIEW READY"];
+
+      var stepMs = reduce ? 45 : 430;
+      var total = lines.length + phases.length;
       var i = 0;
       function step() {
-        if (i < stages.length) {
-          status.textContent = stages[i];
-          fill.style.width = (((i + 1) / (stages.length + 1)) * 100) + "%";
+        fill.style.width = ((Math.min(i + 1, total) / total) * 100) + "%";
+        if (i < lines.length) {
+          var row = el("div", "vx-ledger__row");
+          row.appendChild(el("span", "vx-ledger__term", lines[i][0]));
+          row.appendChild(el("span", "vx-ledger__dots"));
+          row.appendChild(el("span", "vx-ledger__val", lines[i][1]));
+          log2.appendChild(row);
           i += 1;
           window.setTimeout(step, stepMs);
+        } else if (i < total) {
+          var ph = el("div", "vx-ledger__phase" + (i === total - 1 ? " vx-ledger__phase--done" : ""), phases[i - lines.length]);
+          log2.appendChild(ph);
+          i += 1;
+          window.setTimeout(step, reduce ? 45 : 950);
         } else {
-          status.textContent = "Preview ready";
-          fill.style.width = "100%";
           waitForApi(0);
         }
       }
@@ -973,50 +993,95 @@
       step();
     }
 
+    function urgencyLine() {
+      var t = {
+        month: "You said this month. A specialist calls within one business hour, and the first open slot below makes it certain.",
+        quarter: "You said this quarter. The read takes thirty minutes. The drift it stops takes a lot longer.",
+        gathering: "Still gathering information. That is exactly what the full read gives you, and it costs half an hour.",
+      }[state.timeline] || "";
+      var never = state.recency === "never" || state.recency === "unsure";
+      var hasMoney = state.picks.shown.indexOf("f_flow_gap") !== -1 || state.picks.shown.indexOf("f_ded_exposure") !== -1;
+      if (never && hasMoney) t += " Every quarter this runs unchecked, the number above grows.";
+      return t;
+    }
+
     function buildReport(overlay) {
       overlay.innerHTML = "";
-      var inner = el("div", "vx-results__inner");
-      inner.appendChild(el("p", "vx-results__eyebrow", "Free Assessment · Preview"));
-      inner.appendChild(el("h1", "vx-results__h1", state.first + ", here's what stands out."));
-
       var sev = severity();
-      var band = el("div", "vx-sev vx-sev--" + sev[0]);
-      band.appendChild(el("span", "vx-sev__label", sev[1]));
-      band.appendChild(el("span", "vx-sev__line", sev[2]));
-      inner.appendChild(band);
+
+      /* Verdict band (dark) */
+      var band = el("header", "vx-verdict");
+      var bandIn = el("div", "vx-verdict__in");
+      bandIn.appendChild(el("p", "vx-verdict__eyebrow", "Free assessment · Preview for " + state.first));
+      bandIn.appendChild(el("h1", "vx-verdict__word", sev[1]));
+      bandIn.appendChild(el("p", "vx-verdict__line", sev[2]));
 
       var heroKey = "";
-      if (state.picks.shown.indexOf("f_flow_gap") !== -1) heroKey = state.exposure;
-      if (state.picks.shown.indexOf("f_ded_exposure") !== -1) heroKey = state.exposure;
+      if (state.picks.shown.indexOf("f_flow_gap") !== -1 || state.picks.shown.indexOf("f_ded_exposure") !== -1) {
+        heroKey = state.exposure;
+      }
       if (heroKey && HERO_STAT[heroKey]) {
         var hs = HERO_STAT[heroKey];
-        var hero = el("div", "vx-hero");
-        hero.appendChild(el("div", "vx-hero__num", hs[0]));
-        hero.appendChild(el("div", "vx-hero__label", hs[1]));
-        hero.appendChild(el("div", "vx-hero__attr", hs[2]));
-        inner.appendChild(hero);
+        var money = el("div", "vx-money");
+        money.appendChild(el("div", "vx-money__num", hs[0]));
+        money.appendChild(el("div", "vx-money__label", hs[1]));
+        money.appendChild(el("div", "vx-money__attr", hs[2]));
+        bandIn.appendChild(money);
       }
+      band.appendChild(bandIn);
+      overlay.appendChild(band);
 
+      var inner = el("div", "vx-results__inner");
+
+      /* Findings: editorial entries, hairline-separated */
+      inner.appendChild(el("p", "vx-sechead", "What your answers already show"));
       for (var i = 0; i < state.picks.shown.length; i++) {
-        var card = el("div", "vx-rcard");
-        card.appendChild(el("span", "vx-rcard__n", "0" + (i + 1)));
-        card.appendChild(el("p", "", findingText(state.picks.shown[i], state)));
-        inner.appendChild(card);
+        var full = findingText(state.picks.shown[i], state);
+        var dot = full.indexOf(". ");
+        var lead = dot === -1 ? full : full.slice(0, dot + 1);
+        var rest = dot === -1 ? "" : full.slice(dot + 2);
+        var item = el("div", "vx-fitem");
+        item.appendChild(el("span", "vx-fitem__n", "0" + (i + 1)));
+        var body = el("div", "vx-fitem__body");
+        body.appendChild(el("p", "vx-fitem__lead", lead));
+        if (rest) body.appendChild(el("p", "vx-fitem__rest", rest));
+        item.appendChild(body);
+        inner.appendChild(item);
       }
 
-      if (state.picks.held.length) {
-        inner.appendChild(el("div", "vx-held",
-          "+" + state.picks.held.length + " more finding" + (state.picks.held.length > 1 ? "s" : "") +
-          " in the full read. They need your agreements open next to a specialist."));
+      /* Held findings: redacted statement rows */
+      inner.appendChild(el("p", "vx-sechead", "Held for the call"));
+      var lockWrap = el("div", "vx-lockrows");
+      var heldN = Math.max(state.picks.held.length, 2);
+      for (var j = 0; j < heldN; j++) {
+        var row = el("div", "vx-lockrow");
+        row.appendChild(el("span", "vx-lockrow__n", "0" + (state.picks.shown.length + j + 1)));
+        row.appendChild(el("span", "vx-lockrow__bar"));
+        row.appendChild(el("span", "vx-lockrow__tag", "On the call"));
+        lockWrap.appendChild(row);
       }
+      inner.appendChild(lockWrap);
+      inner.appendChild(el("p", "vx-deliver", "Your agreements open next to a specialist. Thirty minutes, plain words, no pitch. You leave knowing where it leaks and what closing it takes."));
 
-      inner.appendChild(el("p", "vx-proof", proofLine()));
+      /* Proof strip */
+      var proof = el("div", "vx-proofstrip");
+      if (state.service === "deduction") {
+        proof.appendChild(el("span", "vx-proofstrip__num", "Since 1990"));
+        proof.appendChild(el("span", "vx-proofstrip__txt", "Recovery is the original work. Accu-Track started out getting back money retailers were quietly holding off CPG invoices."));
+      } else {
+        proof.appendChild(el("span", "vx-proofstrip__num", "$27.6M"));
+        proof.appendChild(el("span", "vx-proofstrip__txt", "recovered for one client in four months, on an inherited licensing portfolio. Hundreds of agreements brought to order."));
+      }
+      inner.appendChild(proof);
 
-      var cta = el("div", "vx-cta");
-      cta.appendChild(el("h2", "", "Get the full read"));
-      cta.appendChild(el("p", "vx-cta__line", state.crmOk
-        ? "A specialist calls you within one business hour. Want to pick the moment instead? Grab a time:"
-        : "Pick a time below and it's locked. Or call us direct at (860) 236-8002."));
+      /* Booking */
+      var cta = el("div", "vx-book");
+      cta.id = "vx-book";
+      cta.appendChild(el("h2", "vx-book__h", "Book the full read"));
+      cta.appendChild(el("p", "vx-book__urgency", urgencyLine()));
+      if (!state.crmOk) {
+        cta.appendChild(el("p", "vx-book__alt", "Pick a time below and it's locked. Or call us direct at (860) 236-8002."));
+      }
       var cal = el("div", "vx-cal");
       cal.id = "vx-cal";
       cta.appendChild(cal);
@@ -1026,6 +1091,19 @@
       inner.appendChild(cta);
 
       overlay.appendChild(inner);
+
+      /* Sticky mobile CTA */
+      var bar = el("div", "vx-stickycta");
+      var barBtn = el("button", "vx-stickycta__btn", "Book the full read");
+      barBtn.type = "button";
+      barBtn.addEventListener("click", function () {
+        var t = document.getElementById("vx-book");
+        if (t) t.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+      });
+      bar.appendChild(barBtn);
+      overlay.appendChild(bar);
+      state.stickyBar = bar;
+
       overlay.scrollTop = 0;
       initCalendar(cal);
     }
@@ -1060,7 +1138,7 @@
     function renderPicker(mount, days) {
       mount.innerHTML = "";
       var sel = { day: null, slot: "" };
-      var dayRow = el("div", "vx-cal__days chat-chiprow");
+      var dayRow = el("div", "vx-cal__days");
       var timeWrap = el("div", "vx-cal__timewrap");
       var confirmWrap = el("div", "vx-cal__confirm");
 
@@ -1072,21 +1150,27 @@
         return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
       }
 
+      function slotBtn(label, onTap) {
+        var b = el("button", "vx-slot", label);
+        b.type = "button";
+        b.addEventListener("click", onTap);
+        return b;
+      }
+
       function renderTimes(day) {
         timeWrap.innerHTML = "";
         confirmWrap.innerHTML = "";
-        var row = el("div", "vx-cal__times chat-chiprow");
+        var row = el("div", "vx-cal__times");
         day.slots.forEach(function (iso) {
-          var b = el("button", "chat-chip", fmtTime(iso));
-          b.type = "button";
-          b.addEventListener("click", function () {
+          var b = slotBtn(fmtTime(iso), function () {
             sel.slot = iso;
-            Array.prototype.forEach.call(row.children, function (c) { c.classList.remove("chat-chip--on"); });
-            b.classList.add("chat-chip--on");
+            Array.prototype.forEach.call(row.children, function (c) { c.classList.remove("vx-slot--on"); });
+            b.classList.add("vx-slot--on");
             renderConfirm(day, iso);
           });
           row.appendChild(b);
         });
+        timeWrap.appendChild(el("p", "vx-cal__label", "Pick a time"));
         timeWrap.appendChild(row);
       }
 
@@ -1110,6 +1194,7 @@
               done.appendChild(el("p", "vx-booked__head", "Booked. " + fmtDay(day.date) + " at " + fmtTime(iso) + "."));
               done.appendChild(el("p", "vx-booked__sub", "A confirmation is on its way to " + state.email + ". Keep your agreements handy for the call, " + state.first + "."));
               mount.appendChild(done);
+              if (state.stickyBar) state.stickyBar.remove();
               track("diagnostic_booked", state.service);
             })
             .catch(function () {
@@ -1120,16 +1205,14 @@
       }
 
       days.forEach(function (day, idx) {
-        var b = el("button", "chat-chip", fmtDay(day.date));
-        b.type = "button";
-        b.addEventListener("click", function () {
+        var b = slotBtn(fmtDay(day.date), function () {
           sel.day = day;
-          Array.prototype.forEach.call(dayRow.children, function (c) { c.classList.remove("chat-chip--on"); });
-          b.classList.add("chat-chip--on");
+          Array.prototype.forEach.call(dayRow.children, function (c) { c.classList.remove("vx-slot--on"); });
+          b.classList.add("vx-slot--on");
           renderTimes(day);
         });
         dayRow.appendChild(b);
-        if (idx === 0) { sel.day = day; b.classList.add("chat-chip--on"); renderTimes(day); }
+        if (idx === 0) { sel.day = day; b.classList.add("vx-slot--on"); renderTimes(day); }
       });
 
       mount.appendChild(el("p", "vx-cal__label", "Pick a day"));
