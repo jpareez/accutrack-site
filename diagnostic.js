@@ -812,14 +812,24 @@
             state.name = v;
             state.first = v.split(" ")[0];
             addUser(v);
-            askPhone();
+            askCompany();
           },
         });
       });
     }
 
+    function askCompany() {
+      addBot("Thanks, " + state.first + ". And the company name?", function () {
+        setTextInput({
+          label: "Company", placeholder: "Company", auto: "organization",
+          validate: function (v) { return v ? "" : "I need the company name for the read."; },
+          onSubmit: function (v) { state.company = v; addUser(v); askPhone(); },
+        });
+      });
+    }
+
     function askPhone() {
-      addBot("Thanks, " + state.first + ". Best direct number? A specialist calls within one business hour. No sequence, no spam.", function () {
+      addBot("Best direct number? A specialist calls within one business hour. No sequence, no spam.", function () {
         setTextInput({
           label: "Direct phone", type: "tel", placeholder: "(555) 555-0100", auto: "tel",
           validate: function (v) {
@@ -831,23 +841,13 @@
     }
 
     function askEmail() {
-      addBot("And a work email, in case the line's busy?", function () {
+      addBot("Last one: work email, in case the line's busy?", function () {
         setTextInput({
           label: "Work email", type: "email", placeholder: "name@company.com", auto: "email",
           validate: function (v) {
             return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? "" : "That email looks short a piece. One more time?";
           },
-          onSubmit: function (v) { state.email = v; addUser(v); askCompany(); },
-        });
-      });
-    }
-
-    function askCompany() {
-      addBot("Company name? Skip it if you'd rather not.", function () {
-        setTextInput({
-          label: "Company", placeholder: "Company", auto: "organization",
-          skip: "Skip", onSkip: function () { addUser("Skip"); submitLead(); },
-          onSubmit: function (v) { state.company = v; if (v) addUser(v); submitLead(); },
+          onSubmit: function (v) { state.email = v; addUser(v); submitLead(); },
         });
       });
     }
@@ -1017,12 +1017,25 @@
       bandIn.appendChild(el("h1", "vx-verdict__word", sev[1]));
       bandIn.appendChild(el("p", "vx-verdict__line", sev[2]));
 
-      var heroKey = "";
-      if (state.picks.shown.indexOf("f_flow_gap") !== -1 || state.picks.shown.indexOf("f_ded_exposure") !== -1) {
-        heroKey = state.exposure;
+      var HERO_FLOW = {
+        u250: ["Under $250K", "a year moving on self-reported numbers", "The full read verifies it line by line."],
+        m1: ["$250K to $1M", "a year moving on self-reported numbers", "The full read verifies it line by line."],
+        m5: ["$1M to $5M", "a year moving on self-reported numbers", "The full read verifies it line by line."],
+        m5p: ["$5M+", "a year moving on self-reported numbers", "The full read verifies it line by line."],
+        u100: ["Under $100K", "a year going out in deductions and fines", "The full read shows how much of it was contestable."],
+        m500: ["$100K to $500K", "a year going out in deductions and fines", "The full read shows how much of it was contestable."],
+        m2: ["$500K to $2M", "a year going out in deductions and fines", "The full read shows how much of it was contestable."],
+        m2p: ["$2M+", "a year going out in deductions and fines", "The full read shows how much of it was contestable."],
+      };
+      var hs = null;
+      if ((state.picks.shown.indexOf("f_flow_gap") !== -1 || state.picks.shown.indexOf("f_ded_exposure") !== -1) && HERO_STAT[state.exposure]) {
+        hs = HERO_STAT[state.exposure];
+      } else if (state.exposure === "unknown") {
+        hs = ["Unknown", "your annual deduction total", "That is finding one. The full read puts a number on it."];
+      } else if (HERO_FLOW[state.exposure]) {
+        hs = HERO_FLOW[state.exposure];
       }
-      if (heroKey && HERO_STAT[heroKey]) {
-        var hs = HERO_STAT[heroKey];
+      if (hs) {
         var money = el("div", "vx-money");
         money.appendChild(el("div", "vx-money__num", hs[0]));
         money.appendChild(el("div", "vx-money__label", hs[1]));
@@ -1246,6 +1259,30 @@
         calPane.appendChild(grid);
       }
 
+      function bookSlot(iso, btn) {
+        btn.disabled = true;
+        btn.textContent = "Booking...";
+        fetch("/api/book", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contactId: state.contactId, startTime: iso }),
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (r) {
+            if (!r || !r.ok) throw new Error("book");
+            mount.innerHTML = "";
+            var done = el("div", "vx-booked");
+            done.appendChild(el("p", "vx-booked__head", "Booked. " + fmtDay(cal.date) + " at " + fmtTime(iso) + "."));
+            done.appendChild(el("p", "vx-booked__sub", "A confirmation is on its way to " + state.email + ". Talk soon, " + state.first + "."));
+            mount.appendChild(done);
+            if (state.stickyBar) state.stickyBar.remove();
+            track("diagnostic_booked", state.service);
+          })
+          .catch(function () {
+            widgetFallback(mount, "That time didn't lock. Grab one below instead:");
+          });
+      }
+
       function renderTimes() {
         timePane.innerHTML = "";
         timePane.classList.remove("is-in");
@@ -1257,50 +1294,29 @@
             timePane.scrollIntoView({ block: "nearest", behavior: reduce ? "auto" : "smooth" });
           }, 60);
         }
-        timePane.appendChild(el("p", "vx-cal__label", "Times · " + fmtDay(cal.date)));
-        var grid = el("div", "vx-times");
+        timePane.appendChild(el("p", "vx-cal__label", fmtDay(cal.date)));
+        var list = el("div", "vx-tlist");
         (avail[cal.date] || []).forEach(function (iso) {
-          var b = el("button", "vx-slot" + (iso === cal.slot ? " vx-slot--on" : ""), fmtTime(iso));
-          b.type = "button";
-          b.addEventListener("click", function () {
-            cal.slot = iso;
-            Array.prototype.forEach.call(grid.children, function (c) { c.classList.remove("vx-slot--on"); });
-            b.classList.add("vx-slot--on");
-            renderConfirm(iso);
-          });
-          grid.appendChild(b);
-        });
-        timePane.appendChild(grid);
-      }
-
-      function renderConfirm(iso) {
-        confirmWrap.innerHTML = "";
-        var btn = el("button", "btn btn--primary btn--block", "Lock in " + fmtDay(cal.date) + " at " + fmtTime(iso));
-        btn.type = "button";
-        btn.addEventListener("click", function () {
-          btn.disabled = true;
-          btn.textContent = "Booking...";
-          fetch("/api/book", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ contactId: state.contactId, startTime: iso }),
-          })
-            .then(function (r) { return r.json(); })
-            .then(function (r) {
-              if (!r || !r.ok) throw new Error("book");
-              mount.innerHTML = "";
-              var done = el("div", "vx-booked");
-              done.appendChild(el("p", "vx-booked__head", "Booked. " + fmtDay(cal.date) + " at " + fmtTime(iso) + "."));
-              done.appendChild(el("p", "vx-booked__sub", "A confirmation is on its way to " + state.email + ". Talk soon, " + state.first + "."));
-              mount.appendChild(done);
-              if (state.stickyBar) state.stickyBar.remove();
-              track("diagnostic_booked", state.service);
-            })
-            .catch(function () {
-              widgetFallback(mount, "That time didn't lock. Grab one below instead:");
+          var row = el("div", "vx-trow");
+          var timeBtn = el("button", "vx-time", fmtTime(iso));
+          timeBtn.type = "button";
+          timeBtn.addEventListener("click", function () {
+            Array.prototype.forEach.call(list.children, function (r) {
+              r.classList.remove("is-split");
+              var c = r.querySelector(".vx-confirm");
+              if (c) c.remove();
             });
+            row.classList.add("is-split");
+            var confirm = el("button", "vx-confirm", "Confirm");
+            confirm.type = "button";
+            confirm.addEventListener("click", function () { bookSlot(iso, confirm); });
+            row.appendChild(confirm);
+            cal.slot = iso;
+          });
+          row.appendChild(timeBtn);
+          list.appendChild(row);
         });
-        confirmWrap.appendChild(btn);
+        timePane.appendChild(list);
       }
 
       renderCal();

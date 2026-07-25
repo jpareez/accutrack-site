@@ -1219,7 +1219,7 @@ button.vx-calcell:hover { border-color: var(--teal); background: var(--teal-wash
 button.vx-calcell.is-sel { background: var(--ink); border-color: var(--ink); color: #EAF2F1; }
 button.vx-calcell.is-sel::after { background: var(--gold); }
 .vx-timepane .vx-cal__label { margin-top: 0; }
-.vx-times { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+
 .vx-analyzing__brand { font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: #7FA0A0; margin: 0; }
 .vx-mech__wedge { margin: 16px 0 4px; font-size: clamp(1.15rem, 2.8vw, 1.45rem); font-weight: 800; letter-spacing: -0.01em; max-width: 30ch; }
 .vx-mech__anchor { margin: 14px 0 0; font-family: var(--mono); font-size: .82rem; letter-spacing: .02em; color: var(--accent-deep); }
@@ -1243,3 +1243,14 @@ button.vx-calcell.is-sel::after { background: var(--gold); }
 @media (prefers-reduced-motion: reduce) { .vx-timepane { transition: none; opacity: 1; transform: none; } }
 button.vx-calcell { transition: border-color .15s ease, background-color .15s ease, transform .12s cubic-bezier(.25,1,.5,1); }
 button.vx-calcell:active { transform: scale(.94); }
+
+/* Calendly-style time list */
+.vx-tlist { display: flex; flex-direction: column; gap: 8px; max-height: 340px; overflow-y: auto; padding-right: 4px; }
+.vx-trow { display: flex; gap: 8px; }
+.vx-time { flex: 1 1 auto; padding: 13px 14px; background: var(--canvas); border: 1px solid var(--teal); border-radius: var(--radius); font-family: var(--sans); font-size: .97rem; font-weight: 700; color: var(--teal-dark); cursor: pointer; font-variant-numeric: tabular-nums; transition: background-color .15s ease, flex-basis .2s cubic-bezier(.25,1,.5,1); }
+.vx-time:hover { background: var(--teal-wash); }
+.vx-trow.is-split .vx-time { flex: 0 0 46%; background: var(--tint-deep); border-color: var(--line-strong); color: var(--ink); cursor: default; }
+.vx-confirm { flex: 1 1 auto; padding: 13px 14px; background: var(--teal); border: 1px solid var(--teal); border-radius: var(--radius); font-family: var(--sans); font-size: .97rem; font-weight: 800; color: #fff; cursor: pointer; animation: vxconf .18s cubic-bezier(.25,1,.5,1); }
+.vx-confirm:hover { background: var(--teal-dark); }
+@keyframes vxconf { from { opacity: 0; transform: translateX(6px); } to { opacity: 1; transform: translateX(0); } }
+@media (prefers-reduced-motion: reduce) { .vx-confirm { animation: none; } }
