@@ -1010,7 +1010,7 @@
       var sev = severity();
 
       /* Verdict band (dark) */
-      var band = el("header", "vx-verdict");
+      var band = el("header", "vx-verdict vx-verdict--" + sev[0]);
       var bandIn = el("div", "vx-verdict__in");
       bandIn.appendChild(el("p", "vx-verdict__eyebrow", "Free assessment · Preview for " + state.first));
       bandIn.appendChild(el("h1", "vx-verdict__word", sev[1]));
@@ -1028,6 +1028,8 @@
         money.appendChild(el("div", "vx-money__attr", hs[2]));
         bandIn.appendChild(money);
       }
+      var today = new Date().toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
+      bandIn.appendChild(el("p", "vx-verdict__meta", "Prepared " + today + " · From your answers · Unverified until reconciled"));
       band.appendChild(bandIn);
       overlay.appendChild(band);
 
