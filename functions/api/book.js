@@ -16,7 +16,9 @@ function json(obj) {
 
 async function handlePost(context) {
   const { request, env } = context;
-  if (!env.GHL_TOKEN || !env.GHL_LOCATION) return json({ ok: false, error: "not-configured" });
+  const TOKEN = env.GHL_TOKEN || env.GHL_Token;
+  const LOCATION = env.GHL_LOCATION || env.GHL_Location;
+  if (!TOKEN || !LOCATION) return json({ ok: false, error: "not-configured" });
 
   let data;
   try {
@@ -39,14 +41,14 @@ async function handlePost(context) {
     res = await fetch(GHL_BASE + "/calendars/events/appointments", {
       method: "POST",
       headers: {
-        Authorization: "Bearer " + env.GHL_TOKEN,
+        Authorization: "Bearer " + TOKEN,
         Version: CAL_VERSION,
         "Content-Type": "application/json",
         Accept: "application/json",
       },
       body: JSON.stringify({
         calendarId: env.GHL_CALENDAR || DEFAULT_CALENDAR,
-        locationId: env.GHL_LOCATION,
+        locationId: LOCATION,
         contactId: contactId,
         startTime: startTime,
         appointmentStatus: "confirmed",

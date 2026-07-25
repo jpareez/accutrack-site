@@ -16,7 +16,8 @@ function json(obj) {
 
 export async function onRequestGet(context) {
   const { request, env } = context;
-  if (!env.GHL_TOKEN) return json({ ok: false, error: "not-configured" });
+  const TOKEN = env.GHL_TOKEN || env.GHL_Token;
+  if (!TOKEN) return json({ ok: false, error: "not-configured" });
 
   const url = new URL(request.url);
   let tz = url.searchParams.get("tz") || "America/New_York";
@@ -35,7 +36,7 @@ export async function onRequestGet(context) {
         "&endDate=" + end + "&timezone=" + encodeURIComponent(tz),
       {
         headers: {
-          Authorization: "Bearer " + env.GHL_TOKEN,
+          Authorization: "Bearer " + TOKEN,
           Version: CAL_VERSION,
           Accept: "application/json",
         },

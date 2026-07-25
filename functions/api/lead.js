@@ -175,6 +175,8 @@ function json(obj) {
 
 async function handlePost(context) {
   const { request, env } = context;
+  const TOKEN = env.GHL_TOKEN || env.GHL_Token;
+  const LOCATION = env.GHL_LOCATION || env.GHL_Location;
 
   let data;
   try {
@@ -220,7 +222,7 @@ async function handlePost(context) {
     ? data.held.filter((k) => FINDING_LABELS[k]).slice(0, 4)
     : [];
 
-  if (!env.GHL_TOKEN || !env.GHL_LOCATION) {
+  if (!TOKEN || !LOCATION) {
     return json({ ok: false, error: "not-configured" });
   }
 
@@ -230,7 +232,7 @@ async function handlePost(context) {
   const score = scoreLead(answers);
 
   const upsertBody = {
-    locationId: env.GHL_LOCATION,
+    locationId: LOCATION,
     firstName,
     lastName,
     email,
@@ -242,7 +244,7 @@ async function handlePost(context) {
 
   let contactId;
   try {
-    const res = await ghlFetch("/contacts/upsert", env.GHL_TOKEN, upsertBody);
+    const res = await ghlFetch("/contacts/upsert", TOKEN, upsertBody);
     if (!res.ok) return json({ ok: false, error: "crm-upsert-" + res.status });
     const body = await res.json();
     contactId = body && body.contact && body.contact.id;
@@ -279,7 +281,7 @@ async function handlePost(context) {
   ].filter(Boolean);
 
   try {
-    await ghlFetch("/contacts/" + contactId + "/notes", env.GHL_TOKEN, {
+    await ghlFetch("/contacts/" + contactId + "/notes", TOKEN, {
       body: lines.join("\n"),
     });
   } catch {
