@@ -16,8 +16,8 @@
   var SITS = {
     sit_light: ["Royalty checks look lighter than they should", "royalty",
       "That's usually the first visible tell. The cause sits a few layers down."],
-    sit_late: ["Statements show up late or not at all", "licensing",
-      "Late statements are rarely a mail problem."],
+    sit_late: ["Statements or payments show up late or not at all", "licensing",
+      "Late statements are rarely a mail problem. Late payments even less so."],
     sit_surprise: ["A renewal or deadline caught us off guard", "licensing",
       "Once is a fluke. What's behind it usually isn't."],
     sit_inherit: ["We're acquiring, and agreements keep piling up", "contract",
@@ -78,7 +78,7 @@
       ["con_volume", "The volume outgrew the person watching it"],
     ],
     royalty: [
-      ["roy_late", "Statements arrive late or incomplete"],
+      ["roy_late", "Statements or payments arrive late or not at all"],
       ["roy_facevalue", "We take the licensee's math at face value"],
       ["roy_suspicion", "Short payments are a suspicion, not a number"],
       ["roy_audit", "A formal audit feels too heavy to start"],

@@ -17,7 +17,7 @@ const ENUMS = {
 
 const SITUATION_LABELS = {
   sit_light: "Royalty checks look lighter than they should",
-  sit_late: "Statements show up late or not at all",
+  sit_late: "Statements or payments show up late or not at all",
   sit_surprise: "A renewal or deadline caught us off guard",
   sit_inherit: "Acquiring; agreements piling up (inherited portfolio)",
   sit_pile: "Contracts piling up faster than they can track",
@@ -44,7 +44,7 @@ const SYMPTOM_LABELS = {
   con_visibility: "Nobody can say what is due this month",
   con_memory: "Tracking lives in one person's head",
   con_volume: "Volume outgrew the person watching it",
-  roy_late: "Statements arrive late or incomplete",
+  roy_late: "Statements or payments arrive late or not at all",
   roy_facevalue: "Takes the licensee's math at face value",
   roy_suspicion: "Short payments are a suspicion, not a number",
   roy_audit: "A formal audit feels too heavy to start",
