@@ -1025,7 +1025,7 @@ html.js .hero .reveal{opacity:1;transform:none;}
 .chat-head__right { display: flex; align-items: center; gap: 14px; }
 .chat-head__book { padding: 9px 16px; background: var(--teal); color: #fff; border: 0; border-radius: 999px; font-family: var(--sans); font-size: .88rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
 .chat-head__book:hover { background: var(--teal-dark); }
-@media (max-width: 480px) { .chat-head__label { display: none; } .chat-head__book { padding: 8px 13px; font-size: .82rem; } }
+@media (max-width: 600px) { .chat-head__label { display: none; } .chat-head__book { padding: 8px 13px; font-size: .82rem; } }
 
 .chat-main { flex: 1 1 auto; display: flex; flex-direction: column; }
 .chat-log { flex: 1 1 auto; padding: 18px 0 8px; }
