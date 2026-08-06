@@ -455,6 +455,21 @@
     } catch (e) {}
   }
 
+  /* Fires when the in-page picker confirms a slot. Stock-widget bookings
+     (fast lane / fallback iframe) cannot fire this; they count later via
+     the offline-upload action. */
+  function fireBookingConversion() {
+    try {
+      if (typeof window.gtag === "function") {
+        window.gtag("event", "conversion", {
+          send_to: "AW-18059564741/voTtCLKvpt0cEMWtvKND",
+          value: 1.0,
+          currency: "USD",
+        });
+      }
+    } catch (e) {}
+  }
+
   function firstTouch() {
     var qs = window.location.search.slice(1);
     var keep = [];
@@ -1296,6 +1311,7 @@
             mount.appendChild(done);
             if (state.stickyBar) state.stickyBar.remove();
             track("diagnostic_booked", state.service);
+            fireBookingConversion();
           })
           .catch(function () {
             widgetFallback(mount, "That time didn't lock. Grab one below instead:");
