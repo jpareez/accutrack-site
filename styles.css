@@ -1254,3 +1254,11 @@ button.vx-calcell:active { transform: scale(.94); }
 .vx-confirm:hover { background: var(--teal-dark); }
 @keyframes vxconf { from { opacity: 0; transform: translateX(6px); } to { opacity: 1; transform: translateX(0); } }
 @media (prefers-reduced-motion: reduce) { .vx-confirm { animation: none; } }
+
+/* ---- Mobile sticky assessment CTA (content pages; assessment + contact excluded) ---- */
+.sticky-cta { display: none; }
+@media (max-width: 760px) {
+  .sticky-cta { display: block; position: fixed; left: 0; right: 0; bottom: 0; z-index: 90; padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px)); background: rgba(255,255,255,.93); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-top: 1px solid rgba(26,42,42,.12); }
+  .sticky-cta .btn { width: 100%; justify-content: center; }
+  body:has(.sticky-cta) .site-footer { padding-bottom: 92px; }
+}
