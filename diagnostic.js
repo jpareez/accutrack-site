@@ -658,10 +658,29 @@
                 });
               }, true]);
             }
+            items.push(["I just want to book a call", jumpToBooking, true]);
             setChips(items);
           });
         });
       }
+    }
+
+    /* Fast lane: straight to the stock booking widget, no questions. The
+       widget captures its own contact info; form_embed.js is already on the
+       page for exactly this. Intake-less bookings are the accepted trade. */
+    function jumpToBooking() {
+      if (document.getElementById("vx-booking-widget")) return;
+      begin(state.service || "direct");
+      track("booking_fastlane", state.service || "direct");
+      addUser("I just want to book a call");
+      clearControls();
+      addBot("Even better. Grab a time below and it's locked in. The specialist does the whole read live on the call.", function () {
+        var wrap = document.createElement("div");
+        wrap.className = "vx-cal vx-cal--fastlane";
+        wrap.innerHTML = '<div class="vx-cal__widget"><iframe src="https://api.leadconnectorhq.com/widget/booking/zqY1dBbeXQwIKC3tmeS9" style="width:100%; min-height:760px; border:none; overflow:hidden; display:block; border-radius:8px;" scrolling="no" id="vx-booking-widget" title="Book your free assessment"></iframe></div>';
+        log.appendChild(wrap);
+        scrollDown();
+      });
     }
 
     function askScale() {
@@ -1323,6 +1342,8 @@
       renderTimes();
     }
 
+    var bookNow = document.getElementById("vx-book-now");
+    if (bookNow) bookNow.addEventListener("click", jumpToBooking);
     open();
   }
 
