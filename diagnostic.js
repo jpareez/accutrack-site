@@ -447,7 +447,7 @@
     try {
       if (typeof window.gtag === "function") {
         window.gtag("event", "conversion", {
-          send_to: "AW-18059564741/WvQcCMGbr8AcEMWtvKND",
+          send_to: "AW-18059564741/l1JjCM3xk90cEMWtvKND",
           value: 1.0,
           currency: "USD",
         });
