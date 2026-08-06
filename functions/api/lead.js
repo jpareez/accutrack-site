@@ -231,6 +231,24 @@ async function handlePost(context) {
   const lastName = nameParts.slice(1).join(" ");
   const score = scoreLead(answers);
 
+  /* Answers land as contact custom fields (created 2026-08-06) so the notify
+     workflow can merge them as {{contact.diagnostic_*}} variables. The intake
+     note below stays the full record; empty values are omitted rather than
+     blanking a prior submission's fields. */
+  const customFields = [
+    { key: "diagnostic_priority_score", field_value: score },
+    { key: "diagnostic_lane", field_value: LANE_LABELS[answers.service] },
+    { key: "diagnostic_trigger", field_value: answers.situation ? SITUATION_LABELS[answers.situation] : "" },
+    { key: "diagnostic_agreements_volume", field_value: SCALE_LABELS[answers.scale] },
+    { key: "diagnostic_symptoms", field_value: answers.symptoms.map((k) => SYMPTOM_LABELS[k]).join(" | ") },
+    { key: "diagnostic_last_reconciled", field_value: RECENCY_LABELS[answers.recency] },
+    { key: "diagnostic_exposure", field_value: answers.exposure && answers.exposure !== "skip" ? EXPOSURE_LABELS[answers.exposure] : "Not shared" },
+    { key: "diagnostic_timeline", field_value: TIMELINE_LABELS[answers.timeline] },
+    { key: "diagnostic_findings_shown", field_value: shown.map((k) => FINDING_LABELS[k]).join(" | ") },
+    { key: "diagnostic_findings_held", field_value: held.map((k) => FINDING_LABELS[k]).join(" | ") },
+    { key: "gclid", field_value: gclid },
+  ].filter((f) => f.field_value !== "" && f.field_value != null);
+
   const upsertBody = {
     locationId: LOCATION,
     firstName,
@@ -240,6 +258,7 @@ async function handlePost(context) {
     companyName: company || undefined,
     source: "Website Diagnostic Funnel",
     tags: ["free-assessment-request", "diagnostic-funnel", "lane-" + answers.service],
+    customFields,
   };
 
   let contactId;
