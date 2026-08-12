@@ -649,6 +649,24 @@
       if (!SITS[seedSit]) seedSit = "";
       state.service = lane || "";
 
+      var keys = lane ? LANE_SITS[lane] : LANE_SITS.cross;
+
+      function q1Chips() {
+        var items = situationChips(keys);
+        if (lane) {
+          items.push(["It's something else", function () {
+            addUser("It's something else");
+            clearControls();
+            state.service = "";
+            addBot("No problem. Which of these is closest?", function () {
+              setChips(situationChips(LANE_SITS.cross));
+            });
+          }, true]);
+        }
+        items.push(["I just want to book a call", jumpToBooking, true]);
+        setChips(items);
+      }
+
       if (seedSit && param("go") === "1") {
         seedBot(Q1);
         var s = SITS[seedSit];
@@ -658,24 +676,18 @@
         track("diagnostic_start", state.service);
         addUser(s[0]);
         addBot(s[2], askScale);
+      } else if (param("go") === "1") {
+        /* Quiz-first ad lander: question one IS the landing screen. Both
+           bubbles seed instantly (no typing delay) so the chips are tappable
+           on first paint; the go=1 entry URL is what separates this arm from
+           the service-page flow in Clarity and Ads. */
+        seedBot("Hey, glad you're here. Quick read on your setup: a few questions, about a minute, and I'll show you what stands out before anyone calls you.");
+        seedBot(Q1);
+        q1Chips();
+        track("diagnostic_q1_landing", lane || "cross");
       } else {
-        var keys = lane ? LANE_SITS[lane] : LANE_SITS.cross;
         addBot("Hey, glad you're here. Quick read on your setup: a few questions, about a minute, and I'll show you what stands out before anyone calls you.", function () {
-          addBot("First one's easy. " + Q1, function () {
-            var items = situationChips(keys);
-            if (lane) {
-              items.push(["It's something else", function () {
-                addUser("It's something else");
-                clearControls();
-                state.service = "";
-                addBot("No problem. Which of these is closest?", function () {
-                  setChips(situationChips(LANE_SITS.cross));
-                });
-              }, true]);
-            }
-            items.push(["I just want to book a call", jumpToBooking, true]);
-            setChips(items);
-          });
+          addBot("First one's easy. " + Q1, q1Chips);
         });
       }
     }
