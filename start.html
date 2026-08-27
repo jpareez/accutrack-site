@@ -18,7 +18,7 @@
   <meta name="description" content="Three questions, about a minute. A specialist reads your answers and tells you what stands out. No charge." />
   <meta name="robots" content="noindex, nofollow" />
   <link rel="canonical" href="https://www.accutracksolutions.com/start" />
-  <meta name="theme-color" content="#308088" />
+  <meta name="theme-color" content="#1E5A61" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
@@ -32,58 +32,169 @@
   <link rel="manifest" href="/site.webmanifest" />
 
   <style>
-    /* /start funnel lander - page-scoped styles. Tokens come from styles.css. */
-    .st-page { min-height: 100svh; display: flex; flex-direction: column; background: var(--tint); }
-    .st-head { display: flex; align-items: center; justify-content: space-between; gap: 12px;
-      padding: 14px clamp(16px, 4vw, 32px); background: var(--canvas); border-bottom: 1px solid var(--line); }
-    .st-head__logo { height: 34px; width: auto; display: block; }
-    .st-head__phone { font-weight: 600; color: var(--teal-dark); text-decoration: none; white-space: nowrap; }
-    .st-head__phone:hover { color: var(--teal); }
+    /* ===== /start funnel lander. Brand tokens come from styles.css. ===== */
+    body { background: var(--canvas); }
+    .st-page { min-height: 100svh; display: flex; flex-direction: column; }
 
-    .st-main { flex: 1; width: 100%; max-width: 660px; margin: 0 auto;
-      padding: clamp(18px, 3.5vw, 40px) clamp(16px, 4vw, 24px) 40px; }
-    .st-h1 { font-size: clamp(1.5rem, 4.6vw, 2.3rem); line-height: 1.15; font-weight: 800;
-      color: var(--ink); margin: 0 0 10px; letter-spacing: -0.015em; }
-    .st-sub { font-size: clamp(1rem, 2.6vw, 1.12rem); color: var(--ink-soft); margin: 0 0 6px; line-height: 1.5; }
-    .st-fence { font-size: 0.85rem; color: var(--ink-faint); margin: 0 0 14px; line-height: 1.45; }
+    /* --- Dark authority band: header + hero live inside it --- */
+    .st-band {
+      position: relative; overflow: hidden;
+      background:
+        radial-gradient(120% 80% at 82% -20%, rgba(72,160,160,0.34) 0%, rgba(30,90,97,0) 55%),
+        radial-gradient(90% 70% at -10% 115%, rgba(201,138,46,0.16) 0%, rgba(30,90,97,0) 50%),
+        var(--teal-dark);
+      color: #EAF2F2;
+    }
+    /* Faint ledger rules: the work is reconciliation, so the texture says so. */
+    .st-band::before {
+      content: ""; position: absolute; inset: 0; pointer-events: none;
+      background-image: repeating-linear-gradient(to bottom, rgba(234,242,242,0.05) 0 1px, transparent 1px 34px);
+      -webkit-mask-image: radial-gradient(80% 60% at 50% 40%, #000 0%, transparent 85%);
+              mask-image: radial-gradient(80% 60% at 50% 40%, #000 0%, transparent 85%);
+    }
+    .st-wrap { position: relative; z-index: 1; width: 100%; max-width: 1120px; margin: 0 auto; padding-inline: clamp(16px, 4vw, 40px); }
 
-    .st-card { background: var(--canvas); border: 1px solid var(--line); border-radius: 14px;
-      padding: clamp(16px, 3.5vw, 26px); box-shadow: 0 1px 2px rgba(26,42,42,.04), 0 8px 24px rgba(26,42,42,.05); }
-    .st-dots { display: flex; gap: 6px; margin: 0 0 14px; }
-    .st-dots span { height: 4px; flex: 1; border-radius: 2px; background: var(--line-strong); transition: background .2s ease; }
-    .st-dots span.on { background: var(--teal); }
-    .st-q { font-size: 1.12rem; font-weight: 700; color: var(--ink); margin: 0 0 12px; }
+    .st-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding-block: 16px; }
+    .st-head__logo { height: 32px; width: auto; display: block; filter: brightness(0) invert(1); opacity: .95; }
+    .st-head__phone {
+      font-family: var(--mono); font-size: 0.94rem; font-weight: 500; color: #fff; text-decoration: none;
+      white-space: nowrap; display: inline-flex; align-items: center; gap: 8px;
+      border: 1px solid rgba(234,242,242,0.28); border-radius: 999px; padding: 7px 15px;
+      transition: border-color .18s ease, background .18s ease;
+    }
+    .st-head__phone:hover { border-color: var(--teal-light); background: rgba(72,160,160,0.16); color: #fff; }
+    .st-head__phone svg { flex: none; opacity: .85; }
+
+    .st-hero { display: grid; grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.98fr);
+      gap: clamp(28px, 4.5vw, 64px); align-items: start; padding-top: clamp(22px, 4vw, 54px); padding-bottom: clamp(30px, 5vw, 88px); }
+
+    .st-eyebrow {
+      font-family: var(--mono); font-size: 12px; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--teal-light); margin: 0 0 16px; display: inline-flex; align-items: center; gap: 10px;
+    }
+    .st-eyebrow::before { content: ""; width: 26px; height: 2px; background: var(--accent); display: block; }
+
+    .st-h1 {
+      font-size: clamp(1.72rem, 1.1rem + 2.6vw, 3.05rem); line-height: 1.1; font-weight: 800;
+      letter-spacing: -0.025em; color: #fff; margin: 0 0 16px; max-width: 17ch;
+    }
+    .st-h1 .accent { color: var(--accent-soft); display: block; }
+    .st-sub { font-size: clamp(1rem, 0.95rem + 0.3vw, 1.16rem); color: #C4DAD9; line-height: 1.55; margin: 0 0 18px; max-width: 46ch; }
+    .st-sub b { color: #fff; font-weight: 600; }
+
+    .st-points { list-style: none; margin: 0 0 20px; padding: 0; display: grid; gap: 9px; }
+    .st-points li { display: flex; align-items: flex-start; gap: 10px; font-size: 0.95rem; color: #BFD6D6; line-height: 1.45; }
+    .st-points svg { flex: none; margin-top: 3px; color: var(--teal-light); }
+
+    .st-fence {
+      font-size: 0.83rem; color: #8FB3B3; line-height: 1.45; margin: 0;
+      padding-top: 16px; border-top: 1px solid rgba(234,242,242,0.14); max-width: 44ch;
+    }
+
+    /* --- The form card: breaks the band edge for depth --- */
+    .st-card {
+      background: var(--canvas); border-radius: var(--radius-lg);
+      padding: clamp(18px, 2.6vw, 30px);
+      box-shadow: 0 40px 70px -30px rgba(12,42,45,0.55), 0 2px 6px rgba(12,42,45,0.16);
+      color: var(--ink);
+    }
+    .st-card__top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+    .st-card__kicker { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--teal); margin: 0; }
+    .st-card__count { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; color: var(--ink-faint); margin: 0; }
+    .st-bar { height: 3px; border-radius: 2px; background: var(--line); overflow: hidden; margin-bottom: 16px; }
+    .st-bar__fill { height: 100%; width: 25%; border-radius: 2px; background: var(--teal); transition: width .28s cubic-bezier(.4,0,.2,1); }
+
+    .st-q { font-size: clamp(1.08rem, 1rem + 0.35vw, 1.24rem); font-weight: 700; letter-spacing: -0.01em; color: var(--ink); margin: 0 0 13px; }
     .st-chips { display: flex; flex-direction: column; gap: 7px; }
-    .st-chip { text-align: left; font: inherit; font-size: 0.98rem; font-weight: 500; color: var(--ink);
-      background: var(--tint); border: 1px solid var(--line-strong); border-radius: 10px;
-      padding: 13px 14px; cursor: pointer; transition: border-color .15s ease, background .15s ease; }
-    .st-chip:hover { border-color: var(--teal); background: var(--teal-wash); }
-    .st-chip:active { background: var(--teal-wash-2); }
-    .st-back { display: none; background: none; border: 0; padding: 0; margin: 14px 0 0; font: inherit;
-      font-size: 0.88rem; color: var(--ink-muted); cursor: pointer; text-decoration: underline; }
+    .st-chip {
+      position: relative; text-align: left; font: inherit; font-size: 0.97rem; font-weight: 500; color: var(--ink);
+      background: var(--canvas); border: 1px solid var(--line-strong); border-radius: var(--radius);
+      padding: 12px 34px 12px 15px; cursor: pointer; overflow: hidden;
+      transition: border-color .16s ease, background .16s ease, transform .16s ease, box-shadow .16s ease;
+    }
+    .st-chip::before {
+      content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+      background: var(--teal); transform: scaleY(0); transform-origin: center; transition: transform .18s ease;
+    }
+    .st-chip::after {
+      content: ""; position: absolute; right: 14px; top: 50%; width: 6px; height: 6px;
+      border-right: 1.7px solid var(--ink-faint); border-top: 1.7px solid var(--ink-faint);
+      transform: translateY(-50%) rotate(45deg); transition: border-color .16s ease, right .16s ease;
+    }
+    .st-chip:hover { border-color: var(--teal-light); background: var(--teal-wash); box-shadow: var(--shadow-card); }
+    .st-chip:hover::before { transform: scaleY(1); }
+    .st-chip:hover::after { border-color: var(--teal); right: 11px; }
+    .st-chip:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+    .st-chip:active { transform: translateY(1px); }
+
+    .st-foot-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 15px; }
+    .st-back { display: none; background: none; border: 0; padding: 0; font: inherit; font-size: 0.88rem;
+      color: var(--ink-muted); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
     .st-back:hover { color: var(--teal-dark); }
-    .st-call { font-size: 0.9rem; color: var(--ink-muted); margin: 14px 0 0; }
-    .st-call a { color: var(--teal-dark); font-weight: 600; text-decoration: none; }
-    .st-call a:hover { color: var(--teal); }
+    .st-call { font-size: 0.88rem; color: var(--ink-muted); margin: 0; }
+    .st-call a { color: var(--teal-dark); font-weight: 600; text-decoration: none; border-bottom: 1px solid var(--line-strong); }
+    .st-call a:hover { color: var(--teal); border-color: var(--teal); }
 
-    .st-field { margin: 0 0 12px; }
-    .st-field label { display: block; font-size: 0.86rem; font-weight: 600; color: var(--ink-soft); margin: 0 0 5px; }
-    .st-field input { width: 100%; font: inherit; font-size: 1rem; color: var(--ink);
-      border: 1px solid var(--line-strong); border-radius: 10px; padding: 12px 13px; background: var(--canvas); }
-    .st-field input:focus { outline: 2px solid var(--teal-light); outline-offset: 1px; border-color: var(--teal); }
+    .st-field { margin: 0 0 11px; }
+    .st-field label { display: block; font-size: 0.84rem; font-weight: 600; color: var(--ink-soft); margin: 0 0 5px; }
+    .st-field input {
+      width: 100%; font: inherit; font-size: 1rem; color: var(--ink);
+      border: 1px solid var(--line-strong); border-radius: var(--radius); padding: 12px 13px; background: var(--canvas);
+      transition: border-color .16s ease, box-shadow .16s ease;
+    }
+    .st-field input:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal-wash-2); }
     .st-hp { position: absolute; left: -9999px; top: -9999px; height: 0; overflow: hidden; }
-    .st-err { display: none; font-size: 0.9rem; color: #A33; margin: 10px 0 0; line-height: 1.45; }
+    .st-err { display: none; font-size: 0.9rem; color: #A3352B; margin: 11px 0 0; line-height: 1.45; }
+    .st-privacy { font-size: 0.8rem; color: var(--ink-faint); margin: 11px 0 0; line-height: 1.45; }
 
-    .st-trust { margin: 26px 0 0; display: grid; gap: 12px; }
-    .st-trust__num { font-family: "IBM Plex Mono", monospace; font-size: 1.7rem; font-weight: 500; color: var(--teal-dark); }
-    .st-trust__item { background: var(--canvas); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px;
-      font-size: 0.93rem; color: var(--ink-soft); line-height: 1.5; }
-    .st-trust__item cite { display: block; font-style: normal; font-size: 0.82rem; color: var(--ink-faint); margin-top: 6px; }
-    .st-foot { text-align: center; font-size: 0.8rem; color: var(--ink-faint); padding: 18px 16px 24px; }
+    /* --- Logo wall --- */
+    .st-logos { background: var(--tint); border-bottom: 1px solid var(--line); padding-block: clamp(24px, 3.6vw, 44px); text-align: center; }
+    .st-logos__caption {
+      font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.13em; text-transform: uppercase;
+      color: var(--ink-faint); margin: 0 0 clamp(16px, 2.2vw, 26px);
+    }
+    .st-logos__row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: clamp(24px, 4.4vw, 62px); }
+    .st-logos__row img { height: 25px; width: auto; opacity: 0.62; filter: grayscale(1); }
+    .st-logos__row img.lg { height: 31px; }
+    .st-logos__row img.sm { height: 20px; }
+
+    /* --- Proof --- */
+    .st-proof { padding-block: clamp(28px, 4vw, 56px); }
+    .st-proof__grid { display: grid; grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); gap: clamp(20px, 3.4vw, 46px); align-items: center; }
+    .st-stat__label { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--teal); margin: 0 0 10px; }
+    .st-stat__big { font-size: clamp(2.9rem, 2rem + 3.4vw, 4rem); font-weight: 800; letter-spacing: -0.035em; line-height: 0.95; color: var(--teal-dark); margin: 0; }
+    .st-stat__big small { font-size: 0.46em; font-weight: 700; margin-left: 2px; }
+    .st-stat__sub { font-size: 0.98rem; color: var(--ink-soft); line-height: 1.5; margin: 12px 0 0; max-width: 40ch; }
+    .st-stat__sub b { color: var(--ink); font-weight: 700; }
+    .st-quote { border-left: 3px solid var(--accent); padding-left: clamp(16px, 2vw, 24px); }
+    .st-quote p { font-size: clamp(1.02rem, 0.98rem + 0.4vw, 1.2rem); line-height: 1.5; color: var(--ink); margin: 0; font-weight: 500; }
+    .st-quote cite { display: block; font-style: normal; font-size: 0.86rem; color: var(--ink-muted); margin-top: 12px; line-height: 1.45; }
+
+    .st-foot { text-align: center; font-size: 0.8rem; color: var(--ink-faint); padding: 20px 16px 26px; background: var(--tint); }
     .st-foot a { color: inherit; }
 
-    @media (min-width: 700px) { .st-trust { grid-template-columns: 1fr 1fr; }
-      .st-trust__item--wide { grid-column: 1 / -1; } }
+    @media (max-width: 860px) {
+      /* Fold discipline: question one and every chip stay above 844px on a 390px phone. */
+      .st-head { padding-block: 12px; }
+      .st-hero { grid-template-columns: 1fr; gap: 20px; padding-top: 14px; padding-bottom: clamp(22px, 4vw, 34px); }
+      .st-card { padding: 16px; }
+      .st-card__top { margin-bottom: 8px; }
+      .st-bar { margin-bottom: 13px; }
+      .st-q { margin-bottom: 11px; }
+      .st-chips { gap: 6px; }
+      .st-chip { padding-block: 11px; }
+      .st-eyebrow, .st-points { display: none; }
+      .st-h1 { max-width: none; margin-bottom: 10px; }
+      .st-h1 .accent { display: inline; }
+      .st-sub { margin-bottom: 13px; max-width: none; }
+      .st-fence { padding-top: 14px; margin-top: 16px; max-width: none; color: #9FC0C0; }
+      .st-fence--desktop { display: none; }
+      .st-proof__grid { grid-template-columns: 1fr; }
+    }
+    @media (min-width: 861px) { .st-fence--mobile { display: none; } }
+    @media (prefers-reduced-motion: reduce) {
+      .st-bar__fill, .st-chip, .st-chip::before, .st-chip::after, .st-field input { transition: none; }
+    }
   </style>
 </head>
 <body>
@@ -92,39 +203,78 @@
   <!-- End Google Tag Manager (noscript) -->
 
   <div class="st-page">
-    <header class="st-head">
-      <img class="st-head__logo" src="assets/accu-logo-full.png" alt="Accu-Track Financial Solutions" />
-      <a class="st-head__phone" href="tel:+18602368002">(860) 236-8002</a>
-    </header>
+    <div class="st-band">
+      <div class="st-wrap">
+        <header class="st-head">
+          <img class="st-head__logo" src="assets/accu-logo-full.png" alt="Accu-Track Financial Solutions" />
+          <a class="st-head__phone" href="tel:+18602368002">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3.2 2.6h2.3l1.1 2.8-1.4.9a8 8 0 0 0 3.5 3.5l.9-1.4 2.8 1.1v2.3c0 .5-.4.9-.9.8A11.4 11.4 0 0 1 2.4 3.5c0-.5.3-.9.8-.9Z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/></svg>
+            (860) 236-8002
+          </a>
+        </header>
 
-    <main class="st-main">
-      <h1 class="st-h1" id="st-h1">You have licensing agreements. We make sure they pay you.</h1>
-      <p class="st-sub">Three questions, about a minute. A specialist reads your answers and tells you what stands out. No charge.</p>
-      <p class="st-fence">We work with brands and licensors on business agreements. Not government licenses or permits.</p>
+        <div class="st-hero">
+          <div class="st-hero__copy">
+            <p class="st-eyebrow" id="st-eyebrow">Licensing Compliance</p>
+            <h1 class="st-h1"><span id="st-h1-lead">You have licensing agreements.</span> <span class="accent" id="st-h1-accent">We make sure they pay you.</span></h1>
+            <p class="st-sub">Three questions, about a minute. A specialist reads your answers and tells you what stands out. <b>No charge.</b></p>
+            <ul class="st-points">
+              <li><svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6.4" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 8.1l1.7 1.7 3.3-3.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg> A dedicated team, not software to staff or a hire to train.</li>
+              <li><svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6.4" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 8.1l1.7 1.7 3.3-3.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg> Running contract and licensing desks for consumer brands since 1990.</li>
+              <li><svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6.4" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 8.1l1.7 1.7 3.3-3.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg> Glastonbury, Connecticut. Working nationwide.</li>
+            </ul>
+            <p class="st-fence st-fence--desktop">We work with brands and licensors on business agreements. Not government licenses or permits.</p>
+          </div>
 
-      <div class="st-card">
-        <div class="st-dots" aria-hidden="true"><span class="on"></span><span></span><span></span><span></span></div>
-        <div id="st-step"></div>
-        <button type="button" class="st-back" id="st-back">Back</button>
-        <p class="st-err" id="st-err"></p>
-        <p class="st-call" id="st-call">Rather talk it through? Call <a href="tel:+18602368002">(860) 236-8002</a></p>
-        <noscript><p>This form needs JavaScript. Use the <a href="contact.html">contact page</a> or call <a href="tel:+18602368002">(860) 236-8002</a>.</p></noscript>
+          <div class="st-card">
+            <div class="st-card__top">
+              <p class="st-card__kicker">Free Assessment</p>
+              <p class="st-card__count" id="st-count">Step 1 of 4</p>
+            </div>
+            <div class="st-bar" aria-hidden="true"><div class="st-bar__fill" id="st-bar"></div></div>
+            <div id="st-step"></div>
+            <p class="st-err" id="st-err"></p>
+            <div class="st-foot-row">
+              <button type="button" class="st-back" id="st-back">Back</button>
+              <p class="st-call" id="st-call">Rather talk it through? <a href="tel:+18602368002">(860) 236-8002</a></p>
+            </div>
+            <noscript><p class="st-privacy">This form needs JavaScript. Use the <a href="contact.html">contact page</a> or call <a href="tel:+18602368002">(860) 236-8002</a>.</p></noscript>
+          </div>
+
+          <p class="st-fence st-fence--mobile">We work with brands and licensors on business agreements. Not government licenses or permits.</p>
+        </div>
       </div>
+    </div>
 
-      <div class="st-trust" id="st-trust">
-        <div class="st-trust__item" id="st-trust-money">
-          <div class="st-trust__num">$27.6M</div>
-          Received for one client in four months. 52% of it directly due to Accu-Track's work.
-        </div>
-        <div class="st-trust__item">
-          "Accu-Track Financial Solutions has been our partner of choice for the past twelve years."
-          <cite>Monty Allen, Senior Manager, Marketing Operations / Licensing, Newell Brands</cite>
-        </div>
-        <div class="st-trust__item st-trust__item--wide" id="st-trust-loc">
-          Glastonbury, Connecticut. Working nationwide.
+    <section class="st-logos">
+      <div class="st-wrap">
+        <p class="st-logos__caption">Trusted by companies that can&rsquo;t afford to get this wrong</p>
+        <div class="st-logos__row">
+          <img src="assets/logo-pg.webp" alt="Procter &amp; Gamble" class="lg" loading="lazy" decoding="async" />
+          <img src="assets/logo-clorox.webp" alt="Clorox" loading="lazy" decoding="async" />
+          <img src="assets/logo-duracell-2.webp" alt="Duracell" class="sm" loading="lazy" decoding="async" />
+          <img src="assets/logo-chemours.webp" alt="Chemours" loading="lazy" decoding="async" />
+          <img src="assets/logo-newell.webp" alt="Newell Brands" loading="lazy" decoding="async" />
+          <img src="assets/logo-prestige.webp" alt="Prestige Consumer Healthcare" loading="lazy" decoding="async" />
         </div>
       </div>
-    </main>
+    </section>
+
+    <section class="st-proof">
+      <div class="st-wrap">
+        <div class="st-proof__grid" id="st-proof-grid">
+          <div class="st-stat" id="st-stat">
+            <p class="st-stat__label">Case Study &middot; Four Months</p>
+            <p class="st-stat__big">$27.6<small>M</small></p>
+            <p class="st-stat__sub">Total cash received for one client in four months. <b>52% of it directly due to Accu-Track&rsquo;s work:</b> 14% from payers the client didn&rsquo;t know existed, 38% from payers who had been paying late or incorrectly.</p>
+          </div>
+          <blockquote class="st-quote">
+            <p>&ldquo;Accu-Track Financial Solutions has been our partner of choice for the past twelve years.&rdquo;</p>
+            <cite>Monty Allen, Senior Manager, Marketing Operations &amp; Licensing, Newell Brands</cite>
+          </blockquote>
+        </div>
+      </div>
+    </section>
 
     <footer class="st-foot">
       <span>&copy; 2026 Accu-Track Financial Solutions. &middot; Site &amp; marketing by <a href="https://www.versorix.com" target="_blank" rel="noopener">Versorix</a></span>
@@ -160,11 +310,12 @@
       deduction: ["sit_deduct", "sit_otif", "sit_sizing", "sit_ahead"],
       cross:     ["sit_light", "sit_pile", "sit_deduct", "sit_compliance", "sit_inherit", "sit_ahead"]
     };
-    var H1 = {
-      licensing: "You have licensing agreements. We make sure they pay you.",
-      contract:  "We run your contracts so nothing slips through.",
-      royalty:   "You have licensing agreements. We make sure they pay you.",
-      deduction: "Retailers keep taking money off your invoices. We get it back."
+    /* [eyebrow, headline lead, accent clause] */
+    var LANE_COPY = {
+      licensing: ["Licensing Compliance", "You have licensing agreements.", "We make sure they pay you."],
+      contract:  ["Outsourced Contract Management", "We run your contracts", "so nothing slips through."],
+      royalty:   ["Royalty Reporting", "You have licensing agreements.", "We make sure they pay you."],
+      deduction: ["Deduction & Trade-Fund Recovery", "Retailers keep taking money off your invoices.", "We get it back."]
     };
     var SCALES = [["A couple dozen or fewer","u25"],["25 to 100","s100"],["100 to 250","s250"],["250 to 500","s500"],["More than 500","p500"]];
     var TIMES  = [["This month","month"],["This quarter","quarter"],["Just gathering info","gathering"]];
@@ -195,21 +346,28 @@
 
     var state = { lane: laneParam, situation: "", scale: "", timeline: "", started: false, step: 1 };
 
-    if (laneParam && H1[laneParam]) document.getElementById("st-h1").textContent = H1[laneParam];
+    if (laneParam && LANE_COPY[laneParam]) {
+      var c = LANE_COPY[laneParam];
+      document.getElementById("st-eyebrow").textContent = c[0];
+      document.getElementById("st-h1-lead").textContent = c[1];
+      document.getElementById("st-h1-accent").textContent = c[2];
+    }
     if (laneParam === "deduction") {
       /* Lane-lock rule: the $27.6M reconciliation stat never shows on the deduction lane. */
-      document.getElementById("st-trust-money").style.display = "none";
-      document.getElementById("st-trust-loc").classList.remove("st-trust__item--wide");
+      document.getElementById("st-stat").style.display = "none";
+      document.getElementById("st-proof-grid").style.gridTemplateColumns = "1fr";
     }
 
     var stepEl = document.getElementById("st-step");
     var backEl = document.getElementById("st-back");
     var errEl  = document.getElementById("st-err");
-    var dots   = document.querySelectorAll(".st-dots span");
+    var barEl  = document.getElementById("st-bar");
+    var cntEl  = document.getElementById("st-count");
 
-    function setDots(n) {
+    function setStep(n) {
       state.step = n;
-      for (var i = 0; i < dots.length; i++) dots[i].className = i < n ? "on" : "";
+      barEl.style.width = (n * 25) + "%";
+      cntEl.textContent = "Step " + n + " of 4";
       backEl.style.display = n > 1 ? "inline" : "none";
       errEl.style.display = "none";
     }
@@ -239,7 +397,7 @@
     }
 
     function step1() {
-      setDots(1);
+      setStep(1);
       var keys = LANE_SITS[state.lane] || LANE_SITS.cross;
       var list = keys.map(function (k) { return [SITS[k][0], k]; });
       render("What is going on?", chips(list, function (item) {
@@ -249,21 +407,21 @@
       }));
     }
     function step2() {
-      setDots(2);
+      setStep(2);
       render("How many agreements are in play?", chips(SCALES, function (item) {
         state.scale = item[1];
         step3();
       }));
     }
     function step3() {
-      setDots(3);
+      setStep(3);
       render("When do you want this handled?", chips(TIMES, function (item) {
         state.timeline = item[1];
         step4();
       }));
     }
     function step4() {
-      setDots(4);
+      setStep(4);
       var form = document.createElement("form");
       form.noValidate = true;
       form.innerHTML =
@@ -272,7 +430,8 @@
         '<div class="st-field"><label for="st-email">Work email</label>' +
         '<input id="st-email" name="email" type="email" autocomplete="email" placeholder="name@company.com" /></div>' +
         '<div class="st-hp" aria-hidden="true"><label>Website<input name="website" tabindex="-1" autocomplete="off" /></label></div>' +
-        '<button type="submit" class="btn btn--primary btn--lg btn--block">Get my read</button>';
+        '<button type="submit" class="btn btn--primary btn--lg btn--block">Get my read <span class="arrow" aria-hidden="true">&rarr;</span></button>' +
+        '<p class="st-privacy">We reply within one business hour. Your information stays confidential.</p>';
       form.addEventListener("submit", function (e) {
         e.preventDefault();
         submitLead(form);
@@ -296,7 +455,7 @@
 
       var btn = form.querySelector("button[type=submit]");
       btn.disabled = true;
-      btn.textContent = "Sending…";
+      btn.textContent = "Sending...";
 
       var payload = {
         service: state.lane || "notsure",
