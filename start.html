@@ -324,10 +324,19 @@
       var m = new RegExp("[?&]" + k + "=([^&]*)").exec(window.location.search);
       return m ? decodeURIComponent(m[1].replace(/\+/g, " ")) : "";
     }
-    function track(name, lane) {
+    /* Funnel tracking: every event goes to the dataLayer (GTM -> GA4) and to Clarity
+       (custom event + session tag), so drop-off per question is readable in both. */
+    var STEP_NAMES = { 1: "situation", 2: "scale", 3: "timeline", 4: "contact_form" };
+    var maxStep = 0;
+    window.clarity = window.clarity || function () { (window.clarity.q = window.clarity.q || []).push(arguments); };
+    function track(name, lane, extra) {
       try {
+        var ev = { event: name, diagnosticLane: lane || "", funnel_step: "", step_name: "", answer: "" };
+        if (extra) for (var k in extra) ev[k] = extra[k];
         window.dataLayer = window.dataLayer || [];
-        window.dataLayer.push({ event: name, diagnosticLane: lane || "" });
+        window.dataLayer.push(ev);
+        window.clarity("event", ev.funnel_step ? name + "_" + ev.funnel_step : name);
+        if (lane) window.clarity("set", "funnel_lane", lane);
       } catch (e) {}
     }
     function firstTouch() {
@@ -366,6 +375,8 @@
 
     function setStep(n) {
       state.step = n;
+      track("funnel_step_view", state.lane, { funnel_step: n, step_name: STEP_NAMES[n] });
+      if (n > maxStep) { maxStep = n; try { window.clarity("set", "funnel_max_step", String(n)); } catch (e) {} }
       barEl.style.width = (n * 25) + "%";
       cntEl.textContent = "Step " + n + " of 4";
       backEl.style.display = n > 1 ? "inline" : "none";
@@ -384,6 +395,7 @@
         b.type = "button";
         b.addEventListener("click", function () {
           if (!state.started) { state.started = true; track("funnel_start", state.lane); }
+          track("funnel_answer", state.lane, { funnel_step: state.step, step_name: STEP_NAMES[state.step], answer: item[1] });
           onPick(item);
         });
         wrap.appendChild(b);
@@ -436,12 +448,19 @@
         e.preventDefault();
         submitLead(form);
       });
+      var typed = false;
+      form.addEventListener("input", function () {
+        if (typed) return;
+        typed = true;
+        track("funnel_form_start", state.lane, { funnel_step: 4, step_name: STEP_NAMES[4] });
+      });
       render("Where should we send what we find?", form);
       var first = form.querySelector("#st-name");
       if (first) first.focus();
     }
 
-    function fail(msg) {
+    function fail(msg, why) {
+      track("funnel_error", state.lane, { funnel_step: state.step, step_name: STEP_NAMES[state.step], answer: why || "network" });
       errEl.textContent = msg || "That didn't go through. Try again, or call (860) 236-8002 and we'll take it from there.";
       errEl.style.display = "block";
     }
@@ -450,8 +469,8 @@
       var name = (form.querySelector("#st-name").value || "").trim();
       var email = (form.querySelector("#st-email").value || "").trim();
       var hp = (form.querySelector('input[name="website"]').value || "").trim();
-      if (!name) return fail("Add your name and we're good to go.");
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail("That email doesn't look complete.");
+      if (!name) return fail("Add your name and we're good to go.", "no_name");
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail("That email doesn't look complete.", "bad_email");
 
       var btn = form.querySelector("button[type=submit]");
       btn.disabled = true;
@@ -483,7 +502,8 @@
         .then(function (r) { return r.json(); })
         .then(function (r) {
           if (r && r.ok) {
-            track("funnel_submit", state.lane);
+            track("funnel_submit", state.lane, { funnel_step: 4, step_name: "submitted" });
+            try { window.clarity("set", "funnel_max_step", "submitted"); } catch (e) {}
             /* /thank-you page load fires the proven conversion action; no labels fired here. */
             window.location.href = "/thank-you";
           } else {
@@ -498,6 +518,7 @@
     }
 
     backEl.addEventListener("click", function () {
+      track("funnel_back", state.lane, { funnel_step: state.step, step_name: STEP_NAMES[state.step] });
       if (state.step === 2) step1();
       else if (state.step === 3) step2();
       else if (state.step === 4) step3();
