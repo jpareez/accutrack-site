@@ -441,6 +441,8 @@
         '<input id="st-name" name="name" autocomplete="name" placeholder="Full name" /></div>' +
         '<div class="st-field"><label for="st-email">Work email</label>' +
         '<input id="st-email" name="email" type="email" autocomplete="email" placeholder="name@company.com" /></div>' +
+        '<div class="st-field"><label for="st-phone">Direct phone</label>' +
+        '<input id="st-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(555) 555-0100" /></div>' +
         '<div class="st-hp" aria-hidden="true"><label>Website<input name="website" tabindex="-1" autocomplete="off" /></label></div>' +
         '<button type="submit" class="btn btn--primary btn--lg btn--block">Get my read <span class="arrow" aria-hidden="true">&rarr;</span></button>' +
         '<p class="st-privacy">We reply within one business hour. Your information stays confidential.</p>';
@@ -471,6 +473,8 @@
       var hp = (form.querySelector('input[name="website"]').value || "").trim();
       if (!name) return fail("Add your name and we're good to go.", "no_name");
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail("That email doesn't look complete.", "bad_email");
+      var phone = (form.querySelector("#st-phone").value || "").trim();
+      if (phone.replace(/\D/g, "").length < 10) return fail("Add a direct number with area code so the call actually lands.", "bad_phone");
 
       var btn = form.querySelector("button[type=submit]");
       btn.disabled = true;
@@ -486,7 +490,7 @@
         exposure: "",
         name: name,
         email: email,
-        phone: "",
+        phone: phone,
         company: "",
         website: hp,
         page: window.location.pathname + window.location.search,

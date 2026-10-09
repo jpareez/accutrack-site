@@ -200,9 +200,9 @@ async function handlePost(context) {
   if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return json({ ok: false, error: "invalid-contact" });
   }
-  /* Phone optional since the /start funnel lander (capture softened to
-     name+email per the Aug 17 review). A provided phone must still be real. */
-  if (phone && phone.replace(/\D/g, "").length < 10) {
+  /* Phone required on both funnels again (Oct 9 2026): a name+email lead from
+     /start went unreachable when the email went unanswered. */
+  if (!phone || phone.replace(/\D/g, "").length < 10) {
     return json({ ok: false, error: "invalid-contact" });
   }
 
