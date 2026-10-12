@@ -86,6 +86,37 @@
     .st-points li { display: flex; align-items: flex-start; gap: 10px; font-size: 0.95rem; color: #BFD6D6; line-height: 1.45; }
     .st-points svg { flex: none; margin-top: 3px; color: var(--teal-light); }
 
+    /* --- Lane VSL: one film per lane, click to play with sound --- */
+    .st-vsl {
+      position: relative; margin: 4px 0 22px; border-radius: 14px; overflow: hidden; aspect-ratio: 16 / 9;
+      background: #0C2A2D center / cover no-repeat;
+      box-shadow: 0 30px 60px -28px rgba(0,0,0,0.6), 0 0 0 1px rgba(234,242,242,0.14);
+    }
+    .st-vsl[hidden] { display: none; }
+    .st-vsl video { width: 100%; height: 100%; display: block; object-fit: cover; background: #0C2A2D; }
+    .st-vsl__play {
+      position: absolute; inset: 0; border: 0; padding: 0; cursor: pointer; color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(to top, rgba(8,30,33,0.62) 0%, rgba(8,30,33,0.08) 58%);
+    }
+    .st-vsl__btn {
+      width: 74px; height: 74px; border-radius: 50%; background: var(--accent); display: grid; place-items: center;
+      box-shadow: 0 12px 30px -8px rgba(0,0,0,0.55); transition: transform .18s ease, background .18s ease;
+    }
+    .st-vsl__play:hover .st-vsl__btn { transform: scale(1.06); background: var(--accent-deep); }
+    .st-vsl__play:focus-visible .st-vsl__btn { outline: 3px solid #fff; outline-offset: 3px; }
+    .st-vsl__btn svg { margin-left: 5px; }
+    .st-vsl__len {
+      position: absolute; left: 16px; bottom: 14px; font-family: var(--mono); font-size: 13px; letter-spacing: 0.04em;
+      background: rgba(8,30,33,0.72); border-radius: 999px; padding: 5px 11px; display: inline-flex; align-items: center; gap: 7px;
+    }
+    .st-vsl__len::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent-soft); }
+    .st-card--cue { animation: stCue 1.6s ease; }
+    @keyframes stCue {
+      0%, 100% { box-shadow: 0 40px 70px -30px rgba(12,42,45,0.55), 0 2px 6px rgba(12,42,45,0.16); }
+      35% { box-shadow: 0 40px 70px -30px rgba(12,42,45,0.55), 0 0 0 4px var(--accent-soft); }
+    }
+
     .st-fence {
       font-size: 0.83rem; color: #8FB3B3; line-height: 1.45; margin: 0;
       padding-top: 16px; border-top: 1px solid rgba(234,242,242,0.14); max-width: 44ch;
@@ -193,6 +224,7 @@
     }
     @media (min-width: 861px) { .st-fence--mobile { display: none; } }
     @media (prefers-reduced-motion: reduce) {
+      .st-card--cue { animation: none; }
       .st-bar__fill, .st-chip, .st-chip::before, .st-chip::after, .st-field input { transition: none; }
     }
   </style>
@@ -218,6 +250,13 @@
             <p class="st-eyebrow" id="st-eyebrow">Licensing Compliance</p>
             <h1 class="st-h1"><span id="st-h1-lead">You have licensing agreements.</span> <span class="accent" id="st-h1-accent">We make sure they pay you.</span></h1>
             <p class="st-sub">Three questions, about a minute. A specialist reads your answers and tells you what stands out. <b>No charge.</b></p>
+            <div class="st-vsl" id="st-vsl" hidden>
+              <video id="st-vsl-video" playsinline preload="none" controlslist="nodownload noplaybackrate" disablepictureinpicture></video>
+              <button type="button" class="st-vsl__play" id="st-vsl-play" aria-label="Play the video (with sound)">
+                <span class="st-vsl__btn"><svg width="26" height="28" viewBox="0 0 26 28" aria-hidden="true"><path d="M2 2.6v22.8c0 1.5 1.6 2.4 2.9 1.6l18.2-11.4c1.2-.7 1.2-2.5 0-3.2L4.9 1C3.6.2 2 1.1 2 2.6Z" fill="#fff"/></svg></span>
+                <span class="st-vsl__len" id="st-vsl-len"></span>
+              </button>
+            </div>
             <ul class="st-points">
               <li><svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6.4" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 8.1l1.7 1.7 3.3-3.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg> A dedicated team, not software to staff or a hire to train.</li>
               <li><svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6.4" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 8.1l1.7 1.7 3.3-3.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg> Running contract and licensing desks for consumer brands since 1990.</li>
@@ -357,6 +396,49 @@
       document.getElementById("st-stat").style.display = "none";
       document.getElementById("st-proof-grid").style.gridTemplateColumns = "1fr";
     }
+
+    /* Lane VSL: licensing, contract and deduction each get their own film; no lane = no film. */
+    var VSL = {
+      licensing: ["assets/vsl/vsl-licensing-v1.mp4", "assets/vsl/vsl-licensing-v1-poster.webp", "1:36"],
+      contract:  ["assets/vsl/vsl-contracts-v1.mp4", "assets/vsl/vsl-contracts-v1-poster.webp", "1:36"],
+      deduction: ["assets/vsl/vsl-deductions-v1.mp4", "assets/vsl/vsl-deductions-v1-poster.webp", "1:32"]
+    };
+    (function () {
+      var v = VSL[laneParam], box = document.getElementById("st-vsl");
+      if (!v || !box) return;
+      var vid = document.getElementById("st-vsl-video"), play = document.getElementById("st-vsl-play");
+      box.style.backgroundImage = "url(" + v[1] + ")";
+      vid.poster = v[1];
+      vid.src = v[0];
+      document.getElementById("st-vsl-len").textContent = v[2];
+      box.hidden = false;
+      var started = false, marks = {};
+      function vslTrack(name) {
+        track(name, state.lane);
+        try { if (window.clarity) window.clarity("event", name); } catch (e) {}
+      }
+      play.addEventListener("click", function () {
+        play.hidden = true;
+        vid.controls = true;
+        var p = vid.play();
+        if (p && p.catch) p.catch(function () { play.hidden = false; vid.controls = false; });
+      });
+      vid.addEventListener("play", function () {
+        if (!started) { started = true; vslTrack("vsl_play"); }
+      });
+      vid.addEventListener("timeupdate", function () {
+        if (!vid.duration) return;
+        var pct = vid.currentTime / vid.duration * 100;
+        [25, 50, 75].forEach(function (m) {
+          if (pct >= m && !marks[m]) { marks[m] = 1; vslTrack("vsl_" + m); }
+        });
+      });
+      vid.addEventListener("ended", function () {
+        vslTrack("vsl_complete");
+        var card = document.querySelector(".st-card");
+        if (card) { card.classList.add("st-card--cue"); setTimeout(function () { card.classList.remove("st-card--cue"); }, 1700); }
+      });
+    })();
 
     var stepEl = document.getElementById("st-step");
     var backEl = document.getElementById("st-back");
