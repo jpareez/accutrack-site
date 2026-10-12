@@ -96,18 +96,18 @@
     .st-vsl video { width: 100%; height: 100%; display: block; object-fit: cover; background: #0C2A2D; }
     .st-vsl__play {
       position: absolute; inset: 0; border: 0; padding: 0; cursor: pointer; color: #fff;
-      display: flex; align-items: center; justify-content: center;
-      background: linear-gradient(to top, rgba(8,30,33,0.62) 0%, rgba(8,30,33,0.08) 58%);
+      display: flex; align-items: flex-end; justify-content: flex-start; gap: 12px; padding: clamp(12px, 2.4vw, 18px);
+      background: linear-gradient(to top, rgba(8,30,33,0.66) 0%, rgba(8,30,33,0) 46%);
     }
     .st-vsl__btn {
-      width: 74px; height: 74px; border-radius: 50%; background: var(--accent); display: grid; place-items: center;
+      width: 58px; height: 58px; flex: none; border-radius: 50%; background: var(--accent); display: grid; place-items: center;
       box-shadow: 0 12px 30px -8px rgba(0,0,0,0.55); transition: transform .18s ease, background .18s ease;
     }
     .st-vsl__play:hover .st-vsl__btn { transform: scale(1.06); background: var(--accent-deep); }
     .st-vsl__play:focus-visible .st-vsl__btn { outline: 3px solid #fff; outline-offset: 3px; }
-    .st-vsl__btn svg { margin-left: 5px; }
+    .st-vsl__btn svg { margin-left: 4px; width: 21px; height: 23px; }
     .st-vsl__len {
-      position: absolute; left: 16px; bottom: 14px; font-family: var(--mono); font-size: 13px; letter-spacing: 0.04em;
+      font-family: var(--mono); font-size: 14px; margin-bottom: 13px; letter-spacing: 0.04em;
       background: rgba(8,30,33,0.72); border-radius: 999px; padding: 5px 11px; display: inline-flex; align-items: center; gap: 7px;
     }
     .st-vsl__len::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent-soft); }
