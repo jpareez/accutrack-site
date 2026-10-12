@@ -65,8 +65,21 @@
     .st-head__phone:hover { border-color: var(--teal-light); background: rgba(72,160,160,0.16); color: #fff; }
     .st-head__phone svg { flex: none; opacity: .85; }
 
-    .st-hero { display: grid; grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.98fr);
-      gap: clamp(28px, 4.5vw, 64px); align-items: start; padding-top: clamp(22px, 4vw, 54px); padding-bottom: clamp(30px, 5vw, 88px); }
+    .st-hero { display: grid; grid-template-columns: minmax(0, 0.86fr) minmax(0, 1.14fr);
+      grid-template-areas: "copy copy" "vsl vsl" "side card";
+      column-gap: clamp(28px, 4.5vw, 64px); row-gap: clamp(18px, 2.6vw, 30px);
+      align-items: start; padding-top: clamp(18px, 3vw, 40px); padding-bottom: clamp(30px, 5vw, 88px); }
+    .st-hero__copy { grid-area: copy; text-align: center; }
+    .st-hero__copy .st-h1 { max-width: 24ch; margin-inline: auto; }
+    .st-hero__copy .st-sub { max-width: 62ch; margin-inline: auto; margin-bottom: 0; }
+    .st-vsl-wrap { grid-area: vsl; }
+    .st-vsl-wrap[hidden] { display: none; }
+    .st-hero__side { grid-area: side; padding-top: clamp(4px, 1.4vw, 16px); }
+    .st-hero > .st-card { grid-area: card; scroll-margin-top: 16px; }
+    .st-skip { margin: 12px 0 0; text-align: center; font-size: 0.92rem; color: #9FC0C0; }
+    .st-skip[hidden] { display: none; }
+    .st-skip a { color: #fff; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(234,242,242,0.4); }
+    .st-skip a:hover { text-decoration-color: var(--accent-soft); }
 
     .st-eyebrow {
       font-family: var(--mono); font-size: 12px; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase;
@@ -88,7 +101,7 @@
 
     /* --- Lane VSL: one film per lane, click to play with sound --- */
     .st-vsl {
-      position: relative; margin: 4px 0 22px; border-radius: 14px; overflow: hidden; aspect-ratio: 16 / 9;
+      position: relative; margin: 0; border-radius: 16px; overflow: hidden; aspect-ratio: 16 / 9;
       background: #0C2A2D center / cover no-repeat;
       box-shadow: 0 30px 60px -28px rgba(0,0,0,0.6), 0 0 0 1px rgba(234,242,242,0.14);
     }
@@ -100,7 +113,7 @@
       background: linear-gradient(to top, rgba(8,30,33,0.66) 0%, rgba(8,30,33,0) 46%);
     }
     .st-vsl__btn {
-      width: 58px; height: 58px; flex: none; border-radius: 50%; background: var(--accent); display: grid; place-items: center;
+      width: clamp(52px, 5.4vw, 74px); height: clamp(52px, 5.4vw, 74px); flex: none; border-radius: 50%; background: var(--accent); display: grid; place-items: center;
       box-shadow: 0 12px 30px -8px rgba(0,0,0,0.55); transition: transform .18s ease, background .18s ease;
     }
     .st-vsl__play:hover .st-vsl__btn { transform: scale(1.06); background: var(--accent-deep); }
@@ -207,7 +220,12 @@
     @media (max-width: 860px) {
       /* Fold discipline: question one and every chip stay above 844px on a 390px phone. */
       .st-head { padding-block: 12px; }
-      .st-hero { grid-template-columns: 1fr; gap: 20px; padding-top: 14px; padding-bottom: clamp(22px, 4vw, 34px); }
+      .st-hero { grid-template-columns: 1fr; grid-template-areas: "copy" "vsl" "card" "side"; gap: 16px; padding-top: 14px; padding-bottom: clamp(22px, 4vw, 34px); }
+      .st-hero__copy { text-align: left; }
+      .st-hero__copy .st-h1, .st-hero__copy .st-sub { margin-inline: 0; }
+      .st-hero__side { display: none; }
+      .st-vsl { border-radius: 12px; }
+      .st-skip { font-size: 0.88rem; margin-top: 10px; }
       .st-card { padding: 16px; }
       .st-card__top { margin-bottom: 8px; }
       .st-bar { margin-bottom: 13px; }
@@ -250,6 +268,9 @@
             <p class="st-eyebrow" id="st-eyebrow">Licensing Compliance</p>
             <h1 class="st-h1"><span id="st-h1-lead">You have licensing agreements.</span> <span class="accent" id="st-h1-accent">We make sure they pay you.</span></h1>
             <p class="st-sub">Three questions, about a minute. A specialist reads your answers and tells you what stands out. <b>No charge.</b></p>
+          </div>
+
+          <div class="st-vsl-wrap" id="st-vsl-wrap" hidden>
             <div class="st-vsl" id="st-vsl" hidden>
               <video id="st-vsl-video" playsinline preload="none" controlslist="nodownload noplaybackrate" disablepictureinpicture></video>
               <button type="button" class="st-vsl__play" id="st-vsl-play" aria-label="Play the video (with sound)">
@@ -257,6 +278,10 @@
                 <span class="st-vsl__len" id="st-vsl-len"></span>
               </button>
             </div>
+            <p class="st-skip" id="st-skip">Rather skip the video? <a href="#st-card">Answer the 3 questions</a> &darr;</p>
+          </div>
+
+          <div class="st-hero__side">
             <ul class="st-points">
               <li><svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6.4" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 8.1l1.7 1.7 3.3-3.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg> A dedicated team, not software to staff or a hire to train.</li>
               <li><svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6.4" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 8.1l1.7 1.7 3.3-3.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg> Running contract and licensing desks for consumer brands since 1990.</li>
@@ -265,7 +290,7 @@
             <p class="st-fence st-fence--desktop">We work with brands and licensors on business agreements. Not government licenses or permits.</p>
           </div>
 
-          <div class="st-card">
+          <div class="st-card" id="st-card">
             <div class="st-card__top">
               <p class="st-card__kicker">Free Assessment</p>
               <p class="st-card__count" id="st-count">Step 1 of 4</p>
@@ -412,6 +437,8 @@
       vid.src = v[0];
       document.getElementById("st-vsl-len").textContent = v[2];
       box.hidden = false;
+      var wrap = document.getElementById("st-vsl-wrap");
+      if (wrap) wrap.hidden = false;
       var started = false, marks = {};
       function vslTrack(name) {
         track(name, state.lane);
