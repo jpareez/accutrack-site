@@ -1003,7 +1003,7 @@
       var total = lines.length + phases.length;
       var i = 0;
       function step() {
-        fill.style.width = ((Math.min(i + 1, total) / total) * 100) + "%";
+        fill.style.transform = "scaleX(" + (Math.min(i + 1, total) / total) + ")";
         if (i < lines.length) {
           var row = el("div", "vx-ledger__row");
           row.appendChild(el("span", "vx-ledger__term", lines[i][0]));

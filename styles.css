@@ -1136,7 +1136,7 @@ html.js .hero .reveal{opacity:1;transform:none;}
 .vx-ledger__phase--done { color: var(--gold); font-weight: 500; }
 @keyframes vxrow { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 .vx-analyzing__bar { width: min(560px, 88vw); height: 2px; background: rgba(233,240,239,.16); overflow: hidden; }
-.vx-analyzing__bar i { display: block; height: 100%; width: 0; background: var(--gold); transition: width .5s cubic-bezier(.22,1,.36,1); }
+.vx-analyzing__bar i { display: block; height: 100%; width: 100%; background: var(--gold); transform: scaleX(0); transform-origin: left; transition: transform .5s cubic-bezier(.22,1,.36,1); }
 @media (prefers-reduced-motion: reduce) { .vx-ledger__row, .vx-ledger__phase { animation: none; } }
 
 /* Verdict band: the one loud moment */
@@ -1253,7 +1253,7 @@ button.vx-calcell:active { transform: scale(.94); }
 /* Calendly-style time list */
 .vx-tlist { display: flex; flex-direction: column; gap: 8px; max-height: 340px; overflow-y: auto; padding-right: 4px; }
 .vx-trow { display: flex; gap: 8px; }
-.vx-time { flex: 1 1 auto; padding: 13px 14px; background: var(--canvas); border: 1px solid var(--teal); border-radius: var(--radius); font-family: var(--sans); font-size: .97rem; font-weight: 700; color: var(--teal-dark); cursor: pointer; font-variant-numeric: tabular-nums; transition: background-color .15s ease, flex-basis .2s cubic-bezier(.25,1,.5,1); }
+.vx-time { flex: 1 1 auto; padding: 13px 14px; background: var(--canvas); border: 1px solid var(--teal); border-radius: var(--radius); font-family: var(--sans); font-size: .97rem; font-weight: 700; color: var(--teal-dark); cursor: pointer; font-variant-numeric: tabular-nums; transition: background-color .15s ease, flex-basis .2s cubic-bezier(.25,1,.5,1); } /* craft-ok: one-shot split on a click, layout confined to one slot row */
 .vx-time:hover { background: var(--teal-wash); }
 .vx-trow.is-split .vx-time { flex: 0 0 46%; background: var(--tint-deep); border-color: var(--line-strong); color: var(--ink); cursor: default; }
 .vx-confirm { flex: 1 1 auto; padding: 13px 14px; background: var(--teal); border: 1px solid var(--teal); border-radius: var(--radius); font-family: var(--sans); font-size: .97rem; font-weight: 800; color: #fff; cursor: pointer; animation: vxconf .18s cubic-bezier(.25,1,.5,1); }
