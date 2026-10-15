@@ -425,6 +425,9 @@
       /* Lane-lock rule: the $27.6M reconciliation stat never shows on the deduction lane. */
       document.getElementById("st-stat").style.display = "none";
       document.getElementById("st-proof-grid").style.gridTemplateColumns = "1fr";
+      /* Logo row + Newell quote are licensing/contract clients, never deduction clients (Brady, Oct 15 2026). */
+      document.querySelector(".st-logos").style.display = "none";
+      document.querySelector(".st-proof").style.display = "none";
     }
 
     /* Lane VSL: licensing, contract and deduction each get their own film; no lane = no film. */
