@@ -125,8 +125,8 @@
   function updateBar() {
     var h = document.documentElement;
     var max = h.scrollHeight - h.clientHeight;
-    var pct = max > 0 ? (window.scrollY / max) * 100 : 0;
-    bar.style.width = pct + "%";
+    var frac = max > 0 ? window.scrollY / max : 0;
+    bar.style.transform = "scaleX(" + frac + ")";
   }
   updateBar();
   window.addEventListener("scroll", updateBar, { passive: true });

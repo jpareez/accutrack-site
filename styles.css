@@ -533,8 +533,9 @@ a.service-card:hover .service-card__more .arrow { transform: translateX(3px); }
 .faq__icon::after  { width: 2px; height: 14px; transform: translate(-50%, -50%); }
 .faq__item[data-open="true"] .faq__icon::after { transform: translate(-50%, -50%) scaleY(0); }
 @media (prefers-reduced-motion: reduce) { .faq__icon::before, .faq__icon::after { transition: none; } }
-.faq__a { overflow: hidden; max-height: 0; transition: max-height .28s ease; }
-.faq__item[data-open="true"] .faq__a { max-height: 320px; }
+.faq__a { display: grid; grid-template-rows: minmax(0, 0fr); overflow: hidden; transition: grid-template-rows .28s ease; } /* craft-ok: accordion, height:auto answers; grid 0fr->1fr per Craft Standard 1.6 */
+.faq__a > * { min-height: 0; }
+.faq__item[data-open="true"] .faq__a { grid-template-rows: minmax(0, 1fr); }
 @media (prefers-reduced-motion: reduce) { .faq__a { transition: none; } }
 .faq__a p { color: var(--ink-soft); padding: 0 4px 26px; max-width: 70ch; }
 
@@ -844,9 +845,10 @@ body[data-leaving="true"] .page-fade { opacity: 0; }
 
 /* scroll progress bar */
 .scroll-progress {
-  position: fixed; top: 0; left: 0; height: 3px; width: 0;
+  position: fixed; top: 0; left: 0; height: 3px; width: 100%;
   background: linear-gradient(90deg, var(--teal) 0%, var(--teal-light) 70%, var(--gold) 100%);
-  z-index: 70; transition: width .12s ease-out; will-change: width;
+  transform: scaleX(0); transform-origin: left;
+  z-index: 70; transition: transform .12s ease-out;
 }
 
 /* animated nav underline */
@@ -864,9 +866,9 @@ body[data-leaving="true"] .page-fade { opacity: 0; }
 .btn--primary::after {
   content: ""; position: absolute; top: 0; left: -130%; width: 55%; height: 100%;
   background: linear-gradient(100deg, transparent, rgba(255,255,255,0.28), transparent);
-  transform: skewX(-18deg); transition: left .6s ease; pointer-events: none;
+  transform: translateX(0) skewX(-18deg); transition: transform .6s ease; pointer-events: none;
 }
-.btn--primary:hover::after { left: 150%; }
+.btn--primary:hover::after { transform: translateX(509.0909%) skewX(-18deg); } /* = left -130% -> 150% on a 55%-wide sheen */
 .btn--primary > * { position: relative; z-index: 1; }
 @media (prefers-reduced-motion: reduce){ .btn--primary::after { display: none; } }
 
