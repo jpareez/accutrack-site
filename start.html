@@ -582,6 +582,7 @@
       track("funnel_error", state.lane, { funnel_step: state.step, step_name: STEP_NAMES[state.step], answer: why || "network" });
       errEl.textContent = msg || "That didn't go through. Try again, or call (860) 236-8002 and we'll take it from there.";
       errEl.style.display = "block";
+      if (errEl.scrollIntoView) errEl.scrollIntoView({ block: "nearest" });
     }
 
     function submitLead(form) {
