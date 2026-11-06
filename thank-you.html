@@ -220,7 +220,7 @@
   <script src="https://link.msgsndr.com/js/form_embed.js" type="text/javascript"></script>
   <script src="diagnostic.js?v=15"></script>
   <script src="site.js"></script>
-  <!-- Google Ads conversion: Submit lead form -->
-  <script>gtag('event','conversion',{'send_to':'AW-18059564741/WvQcCMGbr8AcEMWtvKND','value':1.0,'currency':'USD'});</script>
+  <!-- Lead event. GTM fires the Website Lead Form conversion from this push. Diagnostic leads already fired their own action in the chat, so GTM skips lead_source=diagnostic. -->
+  <script>(function(){var s="contact_form";try{if(sessionStorage.getItem("vxDiag"))s="diagnostic";var l=sessionStorage.getItem("vxLeadSource");if(l){s=l;sessionStorage.removeItem("vxLeadSource");}}catch(e){}window.dataLayer=window.dataLayer||[];window.dataLayer.push({event:"lead_submitted",lead_source:s});})();</script>
 </body>
 </html>

@@ -625,7 +625,8 @@
           if (r && r.ok) {
             track("funnel_submit", state.lane, { funnel_step: 4, step_name: "submitted" });
             try { window.clarity("set", "funnel_max_step", "submitted"); } catch (e) {}
-            /* /thank-you page load fires the proven conversion action; no labels fired here. */
+            /* /thank-you pushes lead_submitted with this source; GTM fires the conversion from it. */
+            try { window.sessionStorage.setItem("vxLeadSource", "start"); } catch (e) {}
             window.location.href = "/thank-you";
           } else {
             btn.disabled = false; btn.textContent = "Get my read";
