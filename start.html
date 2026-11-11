@@ -23,7 +23,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
   <noscript><link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" /></noscript>
-  <link rel="stylesheet" href="styles.css?v=14" />
+  <link rel="stylesheet" href="styles.css?v=15" />
 
   <link rel="icon" href="/favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png" />
@@ -65,8 +65,9 @@
     .st-head__phone:hover { border-color: var(--teal-light); background: rgba(72,160,160,0.16); color: #fff; }
     .st-head__phone svg { flex: none; opacity: .85; }
 
-    .st-hero { display: grid; grid-template-columns: minmax(0, 0.86fr) minmax(0, 1.14fr);
-      grid-template-areas: "copy copy" "vsl vsl" "side card";
+    /* Desktop: VSL and the question card side by side, so question one is on screen at load. */
+    .st-hero { display: grid; grid-template-columns: minmax(0, 1.18fr) minmax(0, 1fr);
+      grid-template-areas: "copy copy" "vsl card" "side side";
       column-gap: clamp(28px, 4.5vw, 64px); row-gap: clamp(18px, 2.6vw, 30px);
       align-items: start; padding-top: clamp(18px, 3vw, 40px); padding-bottom: clamp(30px, 5vw, 88px); }
     .st-hero__copy { grid-area: copy; text-align: center; }
@@ -75,12 +76,19 @@
     .st-hero__copy .st-eyebrow { margin-bottom: 12px; }
     .st-hero__copy .st-sub { max-width: 72ch; margin-inline: auto; margin-bottom: 0; }
     /* Full content width, but never taller than the screen allows: the play control must sit above the fold. */
-    .st-vsl-wrap .st-vsl { width: min(100%, max(600px, calc((100svh - 340px) * 16 / 9))); margin-inline: auto; }
+    .st-vsl-wrap .st-vsl { width: 100%; }
     .st-vsl-wrap { grid-area: vsl; }
     .st-vsl-wrap[hidden] { display: none; }
-    .st-hero__side { grid-area: side; padding-top: clamp(4px, 1.4vw, 16px); }
+    .st-hero__side { grid-area: side; padding-top: clamp(4px, 1.4vw, 16px); display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 14px 32px; }
+    .st-hero__side .st-points { margin: 0; }
+    .st-hero__side .st-fence { border-top: 0; padding-top: 0; }
+    /* No lane = no film: the card takes the right column next to the points. */
+    .st-hero--novsl { grid-template-areas: "copy copy" "side card"; }
+    .st-hero--novsl .st-hero__side { display: block; }
+    .st-hero--novsl .st-hero__side .st-points { margin-bottom: 20px; }
+    .st-hero--novsl .st-hero__side .st-fence { border-top: 1px solid rgba(234,242,242,0.14); padding-top: 16px; }
     .st-hero > .st-card { grid-area: card; scroll-margin-top: 16px; }
-    .st-skip { margin: 12px 0 0; text-align: center; font-size: 0.92rem; color: #9FC0C0; }
+    .st-skip { display: none; margin: 12px 0 0; text-align: center; font-size: 0.92rem; color: #9FC0C0; }
     .st-skip[hidden] { display: none; }
     .st-skip a { color: #fff; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(234,242,242,0.4); }
     .st-skip a:hover { text-decoration-color: var(--accent-soft); }
@@ -224,13 +232,12 @@
     @media (max-width: 860px) {
       /* Fold discipline: question one and every chip stay above 844px on a 390px phone. */
       .st-head { padding-block: 12px; }
-      .st-hero { grid-template-columns: 1fr; grid-template-areas: "copy" "vsl" "card" "side"; gap: 16px; padding-top: 14px; padding-bottom: clamp(22px, 4vw, 34px); }
+      .st-hero, .st-hero--novsl { grid-template-columns: 1fr; grid-template-areas: "copy" "vsl" "card" "side"; gap: 16px; padding-top: 14px; padding-bottom: clamp(22px, 4vw, 34px); }
       .st-hero__copy { text-align: left; }
       .st-hero__copy .st-h1, .st-hero__copy .st-sub { margin-inline: 0; }
       .st-hero__side { display: none; }
       .st-vsl { border-radius: 12px; }
       .st-vsl-wrap .st-vsl { width: 100%; }
-      .st-skip { font-size: 0.88rem; margin-top: 10px; }
       .st-card { padding: 16px; }
       .st-card__top { margin-bottom: 8px; }
       .st-bar { margin-bottom: 13px; }
@@ -268,7 +275,7 @@
           </a>
         </header>
 
-        <div class="st-hero">
+        <div class="st-hero st-hero--novsl" id="st-hero">
           <div class="st-hero__copy">
             <p class="st-eyebrow" id="st-eyebrow">Licensing Compliance</p>
             <h1 class="st-h1"><span id="st-h1-lead">You have licensing agreements.</span> <span class="accent" id="st-h1-accent">We make sure they pay you.</span></h1>
@@ -456,6 +463,7 @@
       box.hidden = false;
       var wrap = document.getElementById("st-vsl-wrap");
       if (wrap) wrap.hidden = false;
+      document.getElementById("st-hero").classList.remove("st-hero--novsl");
       var started = false, marks = {};
       function vslTrack(name) {
         track(name, state.lane);

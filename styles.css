@@ -1268,3 +1268,65 @@ button.vx-calcell:active { transform: scale(.94); }
   .sticky-cta .btn { width: 100%; justify-content: center; }
   body:has(.sticky-cta) .site-footer { padding-bottom: 92px; }
 }
+
+/* ===== Site quiz card (quiz.js): same 3-question form as the /start landers ===== */
+.qz {
+  background: var(--canvas); color: var(--ink); text-align: left;
+  border: 1px solid var(--line); border-radius: var(--radius-lg);
+  padding: clamp(18px, 2.6vw, 28px); scroll-margin-top: 96px;
+  box-shadow: 0 30px 60px -34px rgba(12,42,45,0.45), 0 2px 6px rgba(12,42,45,0.08);
+}
+.qz__top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.qz__kicker { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--teal); margin: 0; }
+.qz__count { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; color: var(--ink-faint); margin: 0; }
+.qz__bar { height: 3px; border-radius: 2px; background: var(--line); overflow: hidden; margin-bottom: 16px; }
+.qz__fill { height: 100%; width: 100%; border-radius: 2px; background: var(--teal); transform: scaleX(.25); transform-origin: left; transition: transform .28s cubic-bezier(.4,0,.2,1); }
+.qz__q { font-size: clamp(1.08rem, 1rem + 0.35vw, 1.24rem); font-weight: 700; letter-spacing: -0.01em; color: var(--ink); margin: 0 0 13px; }
+.qz__chips { display: flex; flex-direction: column; gap: 7px; }
+.qz__chip {
+  position: relative; text-align: left; font: inherit; font-size: 0.97rem; font-weight: 500; color: var(--ink);
+  background: var(--canvas); border: 1px solid var(--line-strong); border-radius: var(--radius);
+  padding: 12px 34px 12px 15px; cursor: pointer; overflow: hidden;
+  transition: border-color .16s ease, background .16s ease, transform .16s ease, box-shadow .16s ease;
+}
+.qz__chip::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--teal); transform: scaleY(0); transition: transform .18s ease; }
+.qz__chip::after {
+  content: ""; position: absolute; right: 14px; top: 50%; width: 6px; height: 6px;
+  border-right: 1.7px solid var(--ink-faint); border-top: 1.7px solid var(--ink-faint);
+  transform: translateY(-50%) rotate(45deg); transition: border-color .16s ease, translate .16s ease;
+}
+.qz__chip:hover { border-color: var(--teal-light); background: var(--teal-wash); box-shadow: var(--shadow-card); }
+.qz__chip:hover::before { transform: scaleY(1); }
+.qz__chip:hover::after { border-color: var(--teal); translate: 3px 0; }
+.qz__chip:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.qz__chip:active { transform: translateY(1px); }
+.qz__foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 15px; }
+.qz__back { display: none; background: none; border: 0; padding: 0; font: inherit; font-size: 0.88rem; color: var(--ink-muted); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.qz__back:hover { color: var(--teal-dark); }
+.qz__call { font-size: 0.88rem; color: var(--ink-muted); margin: 0; }
+.qz__call a { color: var(--teal-dark); font-weight: 600; text-decoration: none; border-bottom: 1px solid var(--line-strong); }
+.qz__call a:hover { color: var(--teal); border-color: var(--teal); }
+.qz__field { margin: 0 0 11px; }
+.qz__field label { display: block; font-size: 0.84rem; font-weight: 600; color: var(--ink-soft); margin: 0 0 5px; }
+.qz__field input { width: 100%; font: inherit; font-size: 1rem; color: var(--ink); border: 1px solid var(--line-strong); border-radius: var(--radius); padding: 12px 13px; background: var(--canvas); transition: border-color .16s ease, box-shadow .16s ease; }
+.qz__field input:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal-wash-2); }
+.qz__hp { position: absolute; left: -9999px; top: -9999px; height: 0; overflow: hidden; }
+.qz__err { display: none; font-size: 0.9rem; color: #A3352B; margin: 11px 0 0; line-height: 1.45; }
+.qz__privacy { font-size: 0.8rem; color: var(--ink-faint); margin: 11px 0 0; line-height: 1.45; }
+.qz__noscript { font-size: .92rem; color: var(--ink-muted); margin: 0; }
+/* homepage hero: the quiz card replaces the proof card */
+.hero--quiz .hero__inner { padding-block: clamp(28px, 4.5vw, 72px); }
+.hero__grid--quiz { align-items: start; }
+@media (min-width: 1041px) { .hero__grid--quiz { grid-template-columns: minmax(0,1.05fr) minmax(0,0.95fr); } }
+.hero__grid--quiz .hero__copy { padding-top: clamp(0px, 1.5vw, 18px); }
+@media (max-width: 860px) {
+  .qz { padding: 16px; }
+  .qz__chips { gap: 6px; }
+  .qz__chip { padding-block: 11px; }
+  /* Phone fold: the card's own kicker carries "Free Assessment", so the eyebrow and microcopy go. */
+  .hero--quiz .hero__for, .hero--quiz .hero__proofline, .hero--quiz .eyebrow, .hero--quiz .hero__microcopy { display: none; }
+  .hero--quiz h1 { margin-bottom: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .qz__fill, .qz__chip, .qz__chip::before, .qz__chip::after, .qz__field input { transition: none; }
+}
