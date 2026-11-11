@@ -67,7 +67,7 @@
 
     /* Desktop: VSL and the question card side by side, so question one is on screen at load. */
     .st-hero { display: grid; grid-template-columns: minmax(0, 1.18fr) minmax(0, 1fr);
-      grid-template-areas: "copy copy" "vsl card" "side side";
+      grid-template-areas: "copy copy" "vsl card" "side card"; grid-template-rows: auto auto 1fr;
       column-gap: clamp(28px, 4.5vw, 64px); row-gap: clamp(18px, 2.6vw, 30px);
       align-items: start; padding-top: clamp(18px, 3vw, 40px); padding-bottom: clamp(30px, 5vw, 88px); }
     .st-hero__copy { grid-area: copy; text-align: center; }
@@ -79,11 +79,11 @@
     .st-vsl-wrap .st-vsl { width: 100%; }
     .st-vsl-wrap { grid-area: vsl; }
     .st-vsl-wrap[hidden] { display: none; }
-    .st-hero__side { grid-area: side; padding-top: clamp(4px, 1.4vw, 16px); display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 14px 32px; }
-    .st-hero__side .st-points { margin: 0; }
-    .st-hero__side .st-fence { border-top: 0; padding-top: 0; }
+    .st-hero__side { grid-area: side; padding-top: 4px; }
+    .st-hero__side .st-points { margin: 0 0 16px; }
+    .st-hero__side .st-fence { max-width: none; }
     /* No lane = no film: the card takes the right column next to the points. */
-    .st-hero--novsl { grid-template-areas: "copy copy" "side card"; }
+    .st-hero--novsl { grid-template-areas: "copy copy" "side card"; grid-template-rows: auto; }
     .st-hero--novsl .st-hero__side { display: block; }
     .st-hero--novsl .st-hero__side .st-points { margin-bottom: 20px; }
     .st-hero--novsl .st-hero__side .st-fence { border-top: 1px solid rgba(234,242,242,0.14); padding-top: 16px; }
@@ -232,7 +232,7 @@
     @media (max-width: 860px) {
       /* Fold discipline: question one and every chip stay above 844px on a 390px phone. */
       .st-head { padding-block: 12px; }
-      .st-hero, .st-hero--novsl { grid-template-columns: 1fr; grid-template-areas: "copy" "vsl" "card" "side"; gap: 16px; padding-top: 14px; padding-bottom: clamp(22px, 4vw, 34px); }
+      .st-hero, .st-hero--novsl { grid-template-columns: 1fr; grid-template-rows: auto; grid-template-areas: "copy" "vsl" "card" "side"; gap: 16px; padding-top: 14px; padding-bottom: clamp(22px, 4vw, 34px); }
       .st-hero__copy { text-align: left; }
       .st-hero__copy .st-h1, .st-hero__copy .st-sub { margin-inline: 0; }
       .st-hero__side { display: none; }
